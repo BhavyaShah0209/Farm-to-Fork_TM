@@ -13,19 +13,27 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = async (req, res) => {
-  const { name, email, mobile, password, role, location, phone } = req.body;
+  // Extract fields - Added 'phone' fallback logic if 'mobile' is passed as 'phone' or vice versa
+  const { name, email, password, role, location } = req.body;
+
+  // Ensure we capture mobile number correctly
+  const mobile = req.body.mobile || req.body.phone;
 
   try {
-    // Check if user exists by email OR mobile
-    const userExists = await User.findOne({
-      $or: [
-        { email: email || 'null_email' },
-        { mobile: mobile || 'null_mobile' }
-      ]
-    });
+    // Check if user exists by email OR mobile (if provided)
+    const checks = [];
+    if (email) checks.push({ email });
+    if (mobile) checks.push({ mobile });
+
+    // If no unique identifier provided (should be validated before), prevent crash
+    if (checks.length === 0) {
+      return res.status(400).json({ message: 'Please provide Email or Mobile Number' });
+    }
+
+    const userExists = await User.findOne({ $or: checks });
 
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'User already exists with this Email or Mobile' });
     }
 
     // 1. Generate Wallet
@@ -36,12 +44,11 @@ const registerUser = async (req, res) => {
     // 2. Create User
     const user = await User.create({
       name,
-      email,
-      mobile,
+      email: email || undefined, // Allow sparse index to work by setting undefined/null, not empty string
+      mobile: mobile || undefined,
       password,
       role,
       location,
-      phone,
       walletAddress,
       encryptedPrivateKey // Stored securely
     });

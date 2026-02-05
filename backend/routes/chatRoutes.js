@@ -19,8 +19,8 @@ router.get('/', getUserChats);
 // Get unread message count
 router.get('/unread/count', getUnreadCount);
 
-// Create or get chat for an order
-router.post('/order/:orderId', createOrGetChat);
+// Create or get chat (flexible: orderId or listingId)
+router.post('/init', createOrGetChat);
 
 // Get specific chat
 router.get('/:chatId', getChat);

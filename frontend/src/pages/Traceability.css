@@ -1,0 +1,191 @@
+.traceability-container {
+  max-width: 600px;
+  margin: 40px auto;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.title {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 30px;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #ecf0f1;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  border-color: #27ae60;
+}
+
+.search-btn {
+  width: auto;
+  padding: 0 25px;
+}
+
+.product-header {
+  text-align: center;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px solid #e9ecef;
+}
+
+.product-title {
+  color: #27ae60;
+  margin: 0 0 10px 0;
+  font-size: 1.8rem;
+}
+
+.product-meta p {
+  margin: 5px 0;
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+/* Timeline Styles */
+.timeline {
+  position: relative;
+  padding-left: 30px;
+  margin-bottom: 40px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 0;
+  width: 3px;
+  background: #e0e0e0;
+  border-radius: 2px;
+}
+
+.event {
+  position: relative;
+  margin-bottom: 25px;
+}
+
+.event::before {
+  content: '';
+  position: absolute;
+  left: -33px;
+  /* Adjust based on padding line */
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  background: #27ae60;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #27ae60;
+  z-index: 2;
+}
+
+.event-card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #ecf0f1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.role-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  color: white;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.role-farmer {
+  background: #27ae60;
+}
+
+.role-distributor {
+  background: #2980b9;
+}
+
+.role-retailer {
+  background: #8e44ad;
+}
+
+.role-consumer {
+  background: #e67e22;
+}
+
+.date {
+  float: right;
+  font-size: 0.8rem;
+  color: #bdc3c7;
+}
+
+.event-action {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+  font-size: 1.05rem;
+}
+
+.event-details {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.tx-hash {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #95a5a6;
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.qr-section {
+  text-align: center;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.qr-code {
+  margin-top: 10px;
+  border: 1px solid #eee;
+  padding: 10px;
+  background: white;
+}
+
+.loading-text,
+.error-text {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.error-text {
+  color: #c0392b;
+}

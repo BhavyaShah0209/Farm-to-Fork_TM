@@ -7,32 +7,53 @@ const User = require('../models/User');
 // @access  Private
 exports.createOrGetChat = async (req, res) => {
   try {
-    const { orderId } = req.params;
+    const { orderId, listingId } = req.body; // Changed to body to support flexible args
 
-    // Check if order exists
-    const order = await Order.findById(orderId).populate('buyer seller');
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
+    let filter = {};
+    let participants = [];
 
-    // Check if user is part of this order
-    const userId = req.user._id.toString();
-    if (userId !== order.buyer._id.toString() && userId !== order.seller._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to access this chat' });
+    if (orderId) {
+      // Chat linked to Order
+      const order = await Order.findById(orderId).populate('buyer seller');
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+
+      filter = { order: orderId };
+      participants = [order.buyer._id, order.seller._id];
+    } else if (listingId) {
+      // Chat linked to Listing (Pre-sales)
+      const listing = await require('../models/Listing').findById(listingId); // Lazy load
+      if (!listing) return res.status(404).json({ message: 'Listing not found' });
+
+      // Check if user is seller or buyer
+      const currentUserId = req.user._id;
+      const sellerId = listing.seller;
+
+      // Valid participants: Seller + Requester
+      if (currentUserId.toString() === sellerId.toString()) {
+        return res.status(400).json({ message: 'Seller cannot start chat with themselves' });
+      }
+
+      filter = { listing: listingId, participants: { $all: [currentUserId, sellerId] } };
+      participants = [currentUserId, sellerId];
+    } else {
+      return res.status(400).json({ message: 'Provide orderId or listingId' });
     }
 
     // Check if chat already exists
-    let chat = await Chat.findOne({ order: orderId })
+    let chat = await Chat.findOne(filter)
       .populate('participants', 'name email mobile role')
       .populate('messages.sender', 'name role');
 
     // If chat doesn't exist, create new one
     if (!chat) {
-      chat = await Chat.create({
-        order: orderId,
-        participants: [order.buyer._id, order.seller._id],
+      const chatData = {
+        participants,
         messages: []
-      });
+      };
+      if (orderId) chatData.order = orderId;
+      if (listingId) chatData.listing = listingId;
+
+      chat = await Chat.create(chatData);
 
       chat = await Chat.findById(chat._id)
         .populate('participants', 'name email mobile role')
@@ -87,7 +108,7 @@ exports.sendMessage = async (req, res) => {
 
     // Add message to chat
     chat.messages.push(newMessage);
-    
+
     // Update lastMessage
     chat.lastMessage = {
       content: content.trim(),
