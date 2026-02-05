@@ -1,5 +1,5 @@
 ### STEP 1: Register Farmer
-POST http://localhost:5000/api/auth/register
+POST http://localhost:5001/api/auth/register
 Content-Type: application/json
 
 {
@@ -10,7 +10,7 @@ Content-Type: application/json
 }
 
 ### STEP 2: Register Distributor
-POST http://localhost:5000/api/auth/register
+POST http://localhost:5001/api/auth/register
 Content-Type: application/json
 
 {
@@ -20,7 +20,11 @@ Content-Type: application/json
   "role": "distributor"
 }
 
-### STEP 3: Login Farmer (COPY THE TOKEN!)
+### STEP 3: Login Farmer
+# ACTION: Run this request
+# RESULT: Copy the "token" value from response
+# EXAMPLE: "token": "eyJhbGc..."
+# PASTE IT: Replace {{FARMER_TOKEN}} in steps below
 POST http://localhost:5000/api/auth/login
 Content-Type: application/json
 
@@ -29,8 +33,12 @@ Content-Type: application/json
   "password": "password123"
 }
 
-### STEP 4: Login Distributor (COPY THE TOKEN!)
-POST http://localhost:5000/api/auth/login
+### STEP 4: Login Distributor
+# ACTION: Run this request
+# RESULT: Copy the "token" value from response
+# EXAMPLE: "token": "eyJhbGc..."
+# PASTE IT: Replace {{DISTRIBUTOR_TOKEN}} in steps below
+POST http://localhost:5001/api/auth/login
 Content-Type: application/json
 
 {
@@ -38,9 +46,13 @@ Content-Type: application/json
   "password": "password123"
 }
 
-### STEP 5: Create Batch & Listing - PASTE FARMER TOKEN (Copy listing _id from response)
-POST http://localhost:5000/api/listings/create
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjMzNzZmOTdkZTNmMmU5N2I1YyIsImlhdCI6MTc3MDI4ODY5OSwiZXhwIjoxNzcyODgwNjk5fQ.c7MaKg-5GlzCmFKZPAC6a8O66jTbeD-UV-_cHTA8OKc
+### STEP 5: Create Batch & Listing
+# ACTION: Replace {{FARMER_TOKEN}} below with token from STEP 3, then run
+# RESULT: Copy the "_id" value from response
+# EXAMPLE: "_id": "698476b276f97de3f2e97b68"
+# PASTE IT: Replace {{LISTING_ID}} in STEP 7
+POST http://localhost:5001/api/listings/create
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODRhZjdiZjg0NmIxNjQ3NWExOGFkOSIsImlhdCI6MTc3MDMwMzM1NSwiZXhwIjoxNzcyODk1MzU1fQ.OZQh1f9efdHssWNZesS6bEferkCHbHiklKWNEeTt8_8
 Content-Type: application/json
 
 {
@@ -51,45 +63,70 @@ Content-Type: application/json
   "originLocation": "Farm Location, State"
 }
 
-### STEP 6: Get All Listings - PASTE FARMER TOKEN
-GET http://localhost:5000/api/listings
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjMzNzZmOTdkZTNmMmU5N2I1YyIsImlhdCI6MTc3MDI4ODY5OSwiZXhwIjoxNzcyODgwNjk5fQ.c7MaKg-5GlzCmFKZPAC6a8O66jTbeD-UV-_cHTA8OKc
+### STEP 6: Get All Listings
+# ACTION: Replace {{FARMER_TOKEN}} with token from STEP 3, then run
+# RESULT: View all available listings
+GET http://localhost:5001/api/listings
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODRhZjdiZjg0NmIxNjQ3NWExOGFkOSIsImlhdCI6MTc3MDMwMzM1NSwiZXhwIjoxNzcyODk1MzU1fQ.OZQh1f9efdHssWNZesS6bEferkCHbHiklKWNEeTt8_8
 
-### STEP 7: Create Order - PASTE DISTRIBUTOR TOKEN & LISTING_ID (Copy order _id from response)
-POST http://localhost:5000/api/orders/create
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+### STEP 7: Create Order
+# ACTION: Replace {{DISTRIBUTOR_TOKEN}} with token from STEP 4
+# ACTION: Replace {{LISTING_ID}} with _id from STEP 5, then run
+# RESULT: Copy the "_id" value from response (this is the ORDER_ID)
+# EXAMPLE: "_id": "698476fc76f97de3f2e97b78"
+# PASTE IT: Replace {{ORDER_ID}} in STEP 9
+POST http://localhost:5001/api/orders/create
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODRhZjdiZjg0NmIxNjQ3NWExOGFkOSIsImlhdCI6MTc3MDMwMzQ2NCwiZXhwIjoxNzcyODk1NDY0fQ.LBtlbQNND_jgMDRFekYGEK49kkNgTEqHVak9dWt-FhA
 Content-Type: application/json
 
 {
-  "listingId": "698476b276f97de3f2e97b68",
+  "listingId": "698485445e7c29eaa1433bab",
   "quantity": 10
 }
 
-### STEP 8: Get All Orders - PASTE DISTRIBUTOR TOKEN
-GET http://localhost:5000/api/orders
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+### STEP 8: Get All Orders
+# ACTION: Replace {{DISTRIBUTOR_TOKEN}} with token from STEP 4, then run
+# RESULT: View all orders
+GET http://localhost:5001/api/orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODRhZjdiZjg0NmIxNjQ3NWExOGFkOSIsImlhdCI6MTc3MDMwMzQ2NCwiZXhwIjoxNzcyODk1NDY0fQ.LBtlbQNND_jgMDRFekYGEK49kkNgTEqHVak9dWt-FhA
 
-### STEP 9: Create/Get Chat - PASTE DISTRIBUTOR TOKEN & ORDER_ID (Copy chat _id from response)
-POST http://localhost:5000/api/chats/order/698476fc76f97de3f2e97b78
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+### STEP 9: Create/Get Chat
+# ACTION: Replace {{DISTRIBUTOR_TOKEN}} with token from STEP 4
+# ACTION: Replace {{ORDER_ID}} with _id from STEP 7, then run
+# RESULT: Copy the "_id" value from response (this is the CHAT_ID)
+# EXAMPLE: "_id": "6984771876f97de3f2e97b92"
+# PASTE IT: Replace {{CHAT_ID}} in STEP 10 and 12
+POST http://localhost:5001/api/chats/order/6984b5c8f846b16475a18b29
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODRhZjdiZjg0NmIxNjQ3NWExOGFkOSIsImlhdCI6MTc3MDMwMzQ2NCwiZXhwIjoxNzcyODk1NDY0fQ.LBtlbQNND_jgMDRFekYGEK49kkNgTEqHVak9dWt-FhA
 
-### STEP 10: Send Message - PASTE ANY TOKEN & CHAT_ID
-POST http://localhost:5000/api/chats/6984771876f97de3f2e97b92/message
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODkyOSwiZXhwIjoxNzcyODgwOTI5fQ.beN0RimhF2zg3bCPWMYyrFrE_DpMWR6V0kp1UQpDnFw
+### STEP 10: Send Message
+# ACTION: Replace {{ANY_TOKEN}} with either FARMER or DISTRIBUTOR token
+# ACTION: Replace {{CHAT_ID}} with _id from STEP 9, then run
+# RESULT: Message is sent and stored in MongoDB
+# CHECK: Go to MongoDB Atlas → chats collection to see the message
+POST http://localhost:5000/api/chats/CHAT_ID/message
+Authorization: Bearer ANY_TOKEN
 Content-Type: application/json
 
 {
   "content": "Hello! Is this produce still available?"
 }
 
-### STEP 11: Get All Chats - PASTE ANY TOKEN
+### STEP 11: Get All Chats
+# ACTION: Replace {{ANY_TOKEN}} with either FARMER or DISTRIBUTOR token, then run
+# RESULT: View all chats for logged-in user
 GET http://localhost:5000/api/chats
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTA3NywiZXhwIjoxNzcyODgxMDc3fQ.Kw5_PywXnfY9QK6cChGv9bg3WbEoTBDjY4yn6H8NOjM
+Authorization: Bearer ANY_TOKEN
 
-### STEP 12: Get Specific Chat - PASTE ANY TOKEN & CHAT_ID
-GET http://localhost:5000/api/chats/6984771876f97de3f2e97b92
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTA3NywiZXhwIjoxNzcyODgxMDc3fQ.Kw5_PywXnfY9QK6cChGv9bg3WbEoTBDjY4yn6H8NOjM
+### STEP 12: Get Specific Chat
+# ACTION: Replace {{ANY_TOKEN}} with either FARMER or DISTRIBUTOR token
+# ACTION: Replace {{CHAT_ID}} with _id from STEP 9, then run
+# RESULT: View specific chat with all messages
+GET http://localhost:5000/api/chats/CHAT_ID
+Authorization: Bearer ANY_TOKEN
 
-### Get Unread Count - PASTE ANY TOKEN
+### Get Unread Count
+# ACTION: Replace {{ANY_TOKEN}} with either FARMER or DISTRIBUTOR token, then run
+# RESULT: Get count of unread messages
 GET http://localhost:5000/api/chats/unread/count
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTE0NiwiZXhwIjoxNzcyODgxMTQ2fQ.3HCqeBox-hsas9Lm1kQpYwnliFlffXB60QYlDof79pY
+Authorization: Bearer ANY_TOKEN
