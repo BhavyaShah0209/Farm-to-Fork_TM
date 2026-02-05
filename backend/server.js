@@ -38,6 +38,7 @@ app.use('/api/listings', require('./routes/listingRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/chats', require('./routes/chatRoutes'));
 app.use('/api/traceability', require('./routes/traceabilityRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
 // app.use('/api/blockchain', require('./routes/blockchainRoutes'));
 
 startServer();

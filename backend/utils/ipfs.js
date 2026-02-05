@@ -1,24 +1,128 @@
-// Placeholder for IPFS Logic
-// You might use libraries like 'ipfs-http-client' or services like Pinata
+// IPFS Integration using Pinata
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
 
-const uploadToIPFS = async (data) => {
-  // Logic to upload JSON or File to IPFS
+// Get Pinata JWT from environment
+const PINATA_JWT = process.env.PINATA_API_JWT;
+const PINATA_GATEWAY = process.env.PINATA_GATEWAY || 'gateway.pinata.cloud';
+
+/**
+ * Upload file to IPFS via Pinata
+ * @param {String} filePath - Path to file on disk
+ * @param {String} originalName - Original filename
+ * @returns {String} IPFS hash (CID)
+ */
+const uploadFileToIPFS = async (filePath, originalName) => {
   try {
-    console.log("Simulating IPFS upload for:", data);
-    // Return a dummy hash for now
-    return "QmHashPlaceholder123456789";
+    if (!PINATA_JWT) {
+      console.warn('⚠️ PINATA_API_JWT not set. Using placeholder.');
+      return `QmPlaceholder${Date.now()}`;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(filePath));
+
+    // Add metadata
+    const metadata = JSON.stringify({
+      name: originalName,
+      keyvalues: {
+        uploadedAt: new Date().toISOString()
+      }
+    });
+    formData.append('pinataMetadata', metadata);
+
+    const response = await axios.post(
+      'https://api.pinata.cloud/pinning/pinFileToIPFS',
+      formData,
+      {
+        headers: {
+          'Authorization': `Bearer ${PINATA_JWT}`,
+          ...formData.getHeaders()
+        }
+      }
+    );
+
+    console.log(`✅ File uploaded to IPFS: ${response.data.IpfsHash}`);
+    return response.data.IpfsHash; // Returns CID like "QmXxx..."
   } catch (error) {
-    throw new Error("IPFS Upload Failed");
+    console.error('IPFS Upload Error:', error.response?.data || error.message);
+    throw new Error('Failed to upload file to IPFS');
   }
 };
 
+/**
+ * Upload JSON data to IPFS
+ * @param {Object} jsonData - JSON object to upload
+ * @returns {String} IPFS hash (CID)
+ */
+const uploadJSONToIPFS = async (jsonData) => {
+  try {
+    if (!PINATA_JWT) {
+      console.warn('⚠️ PINATA_API_JWT not set. Using placeholder.');
+      return `QmJSONPlaceholder${Date.now()}`;
+    }
+
+    const response = await axios.post(
+      'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+      jsonData,
+      {
+        headers: {
+          'Authorization': `Bearer ${PINATA_JWT}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log(`✅ JSON uploaded to IPFS: ${response.data.IpfsHash}`);
+    return response.data.IpfsHash;
+  } catch (error) {
+    console.error('IPFS JSON Upload Error:', error.response?.data || error.message);
+    throw new Error('Failed to upload JSON to IPFS');
+  }
+};
+
+/**
+ * Get file URL from IPFS hash
+ * @param {String} hash - IPFS hash (CID)
+ * @returns {String} Public gateway URL
+ */
+const getIPFSUrl = (hash) => {
+  return `https://${PINATA_GATEWAY}/ipfs/${hash}`;
+};
+
+/**
+ * Fetch data from IPFS
+ * @param {String} hash - IPFS hash (CID)
+ * @returns {Object} Data from IPFS
+ */
 const getFromIPFS = async (hash) => {
   try {
-    console.log("Fetching from IPFS hash:", hash);
-    return { message: "Simulated IPFS Data" };
+    const url = getIPFSUrl(hash);
+    const response = await axios.get(url);
+    return response.data;
   } catch (error) {
-    throw new Error("IPFS Fetch Failed");
+    console.error('IPFS Fetch Error:', error.message);
+    throw new Error('Failed to fetch from IPFS');
   }
 };
 
-module.exports = { uploadToIPFS, getFromIPFS };
+/**
+ * Upload multiple files to IPFS
+ * @param {Array} files - Array of file objects with path and originalname
+ * @returns {Array} Array of IPFS hashes
+ */
+const uploadMultipleFiles = async (files) => {
+  const uploadPromises = files.map(file => 
+    uploadFileToIPFS(file.path, file.originalname)
+  );
+  return await Promise.all(uploadPromises);
+};
+
+module.exports = {
+  uploadFileToIPFS,
+  uploadJSONToIPFS,
+  uploadMultipleFiles,
+  getFromIPFS,
+  getIPFSUrl
+};
