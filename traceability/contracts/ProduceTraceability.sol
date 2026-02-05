@@ -16,6 +16,14 @@ contract ProduceTraceability is Ownable {
         uint256 timestamp;
     }
 
+    struct QualityCheck {
+        string[] pesticidesUsed;      // List of pesticide names/brands
+        string[] fertilizersUsed;     // List of fertilizer names/brands
+        string[] proofPhotos;         // IPFS hashes of photos (fertilizer bags, receipts, etc.)
+        string certificationHash;     // IPFS hash of quality certification document (optional)
+        uint256 lastUpdated;          // Timestamp of last quality update
+    }
+
     struct Batch {
         string batchId;
         string parentBatchId;
@@ -24,6 +32,7 @@ contract ProduceTraceability is Ownable {
         bytes32 dataHash;
         Status status;
         EventLog[] history;
+        QualityCheck qualityData;     // Quality check information
     }
 
     mapping(string => Batch) private batches;
@@ -47,8 +56,60 @@ contract ProduceTraceability is Ownable {
         b.dataHash = dataHash;
         b.status = Status.CREATED;
 
+        // Initialize quality data
+        b.qualityData.lastUpdated = block.timestamp;
+
         b.history.push(
             EventLog("CREATED", farmerId, farmerId, block.timestamp)
+        );
+    }
+
+    function addQualityCheck(
+        string calldata batchId,
+        string[] calldata pesticides,
+        string[] calldata fertilizers,
+        string[] calldata photos,
+        string calldata certHash
+    ) external onlyOwner {
+        require(batchExists(batchId), "Batch missing");
+
+        Batch storage b = batches[batchId];
+        
+        // Add pesticides
+        for (uint i = 0; i < pesticides.length; i++) {
+            b.qualityData.pesticidesUsed.push(pesticides[i]);
+        }
+        
+        // Add fertilizers
+        for (uint i = 0; i < fertilizers.length; i++) {
+            b.qualityData.fertilizersUsed.push(fertilizers[i]);
+        }
+        
+        // Add proof photos (IPFS hashes)
+        for (uint i = 0; i < photos.length; i++) {
+            b.qualityData.proofPhotos.push(photos[i]);
+        }
+        
+        b.qualityData.certificationHash = certHash;
+        b.qualityData.lastUpdated = block.timestamp;
+
+        b.history.push(
+            EventLog("QUALITY_CHECK_ADDED", b.holderId, b.holderId, block.timestamp)
+        );
+    }
+
+    function updateQualityProof(
+        string calldata batchId,
+        string calldata photoHash
+    ) external onlyOwner {
+        require(batchExists(batchId), "Batch missing");
+
+        Batch storage b = batches[batchId];
+        b.qualityData.proofPhotos.push(photoHash);
+        b.qualityData.lastUpdated = block.timestamp;
+
+        b.history.push(
+            EventLog("QUALITY_PROOF_UPDATED", b.holderId, b.holderId, block.timestamp)
         );
     }
 
@@ -125,6 +186,28 @@ contract ProduceTraceability is Ownable {
             b.dataHash,
             b.status,
             b.history
+        );
+    }
+
+    function getQualityCheck(string calldata id)
+        external
+        view
+        returns (
+            string[] memory pesticides,
+            string[] memory fertilizers,
+            string[] memory photos,
+            string memory certificationHash,
+            uint256 lastUpdated
+        )
+    {
+        require(batchExists(id), "Batch missing");
+        Batch storage b = batches[id];
+        return (
+            b.qualityData.pesticidesUsed,
+            b.qualityData.fertilizersUsed,
+            b.qualityData.proofPhotos,
+            b.qualityData.certificationHash,
+            b.qualityData.lastUpdated
         );
     }
 }
