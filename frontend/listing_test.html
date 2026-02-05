@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listing & Post Simulator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .box {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.2rem;
+    }
+
+    input,
+    button,
+    select {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    pre {
+      background: #eee;
+      padding: 10px;
+      overflow-x: auto;
+      border-radius: 4px;
+    }
+
+    .listing-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🚜 Farmer Posting Simulator</h1>
+
+  <!-- 1. Authentication -->
+  <div class="box" id="authBox">
+    <h2>1. Farmer Login</h2>
+    <input type="email" id="loginEmail" placeholder="Farmer Email" value="farmer@example.com">
+    <input type="password" id="loginPass" placeholder="Password" value="123456">
+    <button onclick="login()">Login as Farmer</button>
+    <div id="authStatus"></div>
+  </div>
+
+  <!-- 2. Creation Form -->
+  <div class="box hidden" id="createBox">
+    <h2>2. Post a New Crop Batch</h2>
+    <p style="font-size: 0.9rem; color: #666;">This creates a "Batch ID" (Blockchain Traceable) and "Listing ID" (Sales
+      Posting).</p>
+
+    <input type="text" id="cropName" placeholder="Crop Name (e.g. Kashmiri Apples)" value="Organic Wheat">
+    <input type="number" id="quantity" placeholder="Quantity (kg)" value="100">
+    <input type="number" id="price" placeholder="Price per Kg (₹)" value="40">
+    <input type="text" id="origin" placeholder="Origin Location" value="Punjab, India">
+    <input type="date" id="harvestDate">
+
+    <button onclick="createListing()">Post Listing</button>
+    <div id="createStatus"></div>
+  </div>
+
+  <!-- 3. Feed -->
+  <div class="box hidden" id="feedBox">
+    <h2>3. Market Feed (What Distributors See)</h2>
+    <button onclick="loadFeed()" style="background-color: #007bff;">Refresh Feed</button>
+    <div id="feedContainer" style="margin-top: 15px;"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    let AUTH_TOKEN = '';
+
+    // Init Date
+    document.getElementById('harvestDate').valueAsDate = new Date();
+
+    // --- Step 1: Login ---
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPass').value;
+      const statusDiv = document.getElementById('authStatus');
+
+      statusDiv.innerHTML = 'Logging in...';
+
+      try {
+        // Try to login, if fail, try to register quickly (for testing convenience)
+        let res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (res.status === 500) {
+          // Try register if login fails (assuming user doesn't exist)
+          console.log("Login failed, trying to register...");
+          res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: "Test Farmer",
+              email,
+              password,
+              role: "farmer",
+              mobile: "9999999999", // Dummy mobile
+              walletAddress: "0x123", // Dummy for now if backend generates it
+              location: { city: "Punjab" }
+            })
+          });
+        }
+
+        const data = await res.json();
+
+        if (res.ok) {
+          AUTH_TOKEN = data.token;
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = '✅ Logged in as ' + data.name;
+
+          if (data.role !== 'farmer') {
+            statusDiv.innerHTML += ' <br>⚠️ Warning: You are not a Farmer. Posting might fail.';
+          }
+
+          document.getElementById('createBox').classList.remove('hidden');
+          document.getElementById('feedBox').classList.remove('hidden');
+          loadFeed(); // Auto load feed
+        } else {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = '❌ ' + (data.message || 'Login failed');
+        }
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = '❌ Server Error: ' + err.message;
+      }
+    }
+
+    // --- Step 2: Create Listing ---
+    async function createListing() {
+      const statusDiv = document.getElementById('createStatus');
+      statusDiv.className = '';
+      statusDiv.innerHTML = 'Creating Batch & Listing...';
+
+      const payload = {
+        cropName: document.getElementById('cropName').value,
+        quantity: document.getElementById('quantity').value,
+        pricePerKg: document.getElementById('price').value,
+        originLocation: document.getElementById('origin').value,
+        harvestDate: document.getElementById('harvestDate').value
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/listings/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${AUTH_TOKEN}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = `✅ Published!<br><b>Batch ID:</b> ${data.batch.batchId}<br><b>Listing ID:</b> ${data.listing._id}`;
+          loadFeed(); // Refresh feed
+        } else {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = '❌ ' + (data.message || 'Failed');
+        }
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = '❌ Error: ' + err.message;
+      }
+    }
+
+    // --- Step 3: Load Feed ---
+    async function loadFeed() {
+      const container = document.getElementById('feedContainer');
+      container.innerHTML = 'Loading...';
+
+      try {
+        const res = await fetch(`${API_URL}/listings`, {
+          headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+        });
+        const listings = await res.json();
+
+        container.innerHTML = '';
+        if (listings.length === 0) {
+          container.innerHTML = '<p>No active listings found.</p>';
+          return;
+        }
+
+        listings.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'listing-card';
+          div.innerHTML = `
+                        <h3>🌾 ${item.batch.cropName} (${item.batch.batchId})</h3>
+                        <p><b>Farmer:</b> ${item.seller.name}</p>
+                        <p><b>Quantity:</b> ${item.quantityAvailable} kg</p>
+                        <p><b>Price:</b> ₹${item.pricePerKg} / kg</p>
+                        <p><b>Origin:</b> ${item.batch.originLocation}</p>
+                        <p style="color: #666; font-size: 0.8rem;">Posted: ${new Date(item.createdAt).toLocaleString()}</p>
+                    `;
+          container.appendChild(div);
+        });
+
+      } catch (err) {
+        container.innerHTML = 'Failed to load feed';
+      }
+    }
+  </script>
+</body>
+
+</html>

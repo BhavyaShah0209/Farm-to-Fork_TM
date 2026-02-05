@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm-to-Fork Backend Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+
+    .box {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    input,
+    select,
+    button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow-x: auto;
+    }
+
+    .status {
+      font-weight: bold;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Backend Connection Tester</h1>
+
+  <!-- Registration Section -->
+  <div class="box">
+    <h2>1. Test Registration (MongoDB Write)</h2>
+    <form id="registerForm">
+      <input type="text" id="regName" placeholder="Name" required value="Test User">
+      <input type="email" id="regEmail" placeholder="Email" required value="test@example.com">
+      <input type="password" id="regPass" placeholder="Password" required value="123456">
+      <select id="regRole">
+        <option value="farmer">Farmer</option>
+        <option value="distributor">Distributor</option>
+        <option value="retailer">Retailer</option>
+        <option value="consumer">Consumer</option>
+      </select>
+      <button type="submit">Register User</button>
+    </form>
+    <div id="regResult" class="status"></div>
+    <pre id="regOutput"></pre>
+  </div>
+
+  <!-- Login Section -->
+  <div class="box">
+    <h2>2. Test Login (MongoDB Read)</h2>
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email" required value="test@example.com">
+      <input type="password" id="loginPass" placeholder="Password" required value="123456">
+      <button type="submit">Login User</button>
+    </form>
+    <div id="loginResult" class="status"></div>
+    <pre id="loginOutput"></pre>
+  </div>
+
+  <!-- Profile Section (JWT Test) -->
+  <div class="box">
+    <h2>3. Test Protected Route (JWT Authentication)</h2>
+    <p>This endpoint requires a valid Token (Bearer Token).</p>
+    <form id="profileForm">
+      <input type="text" id="authToken" placeholder="Paste Token Here (or login above)" required>
+      <button type="submit">Get User Profile</button>
+    </form>
+    <div id="profileResult" class="status"></div>
+    <pre id="profileOutput"></pre>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api/auth';
+
+    // Register Function
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('regOutput');
+      const resultMsg = document.getElementById('regResult');
+      output.textContent = 'Sending data...';
+
+      const data = {
+        name: document.getElementById('regName').value,
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPass').value,
+        role: document.getElementById('regRole').value
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+
+        output.textContent = JSON.stringify(json, null, 2);
+        if (res.ok) {
+          resultMsg.textContent = '✅ Success! User saved to MongoDB.';
+          resultMsg.className = 'status success';
+        } else {
+          resultMsg.textContent = '❌ Error!';
+          resultMsg.className = 'status error';
+        }
+      } catch (err) {
+        output.textContent = err.message;
+        resultMsg.textContent = '❌ Network Error! Is server running?';
+      }
+    });
+
+    // Login Function
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('loginOutput');
+      const resultMsg = document.getElementById('loginResult');
+      output.textContent = 'Verifying credentials...';
+
+      const data = {
+        email: document.getElementById('loginEmail').value,
+        password: document.getElementById('loginPass').value
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+
+        output.textContent = JSON.stringify(json, null, 2);
+        if (res.ok) {
+          resultMsg.textContent = '✅ Success! User found in MongoDB.';
+          resultMsg.className = 'status success';
+
+          if (json.token) {
+            document.getElementById('authToken').value = json.token;
+          }
+        } else {
+          resultMsg.textContent = '❌ Error!';
+          resultMsg.className = 'status error';
+        }
+      } catch (err) {
+        output.textContent = err.message;
+        resultMsg.textContent = '❌ Network Error! Is server running?';
+      }
+    });
+
+    // Profile Function
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = document.getElementById('authToken').value;
+      const output = document.getElementById('profileOutput');
+      const resultMsg = document.getElementById('profileResult');
+
+      output.textContent = 'Fetching profile...';
+
+      try {
+        const res = await fetch(`${API_URL}/profile`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        output.textContent = JSON.stringify(json, null, 2);
+
+        if (res.ok) {
+          resultMsg.textContent = '✅ Success! Server verified JWT and returned ID: ' + json._id;
+          resultMsg.className = 'status success';
+        } else {
+          resultMsg.textContent = '❌ Access Denied! Token invalid.';
+          resultMsg.className = 'status error';
+        }
+      } catch (err) {
+        output.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+
+</html>

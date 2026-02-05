@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm-to-Fork Market Simulation</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f4f6f8;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .container {
+      display: flex;
+      gap: 15px;
+    }
+
+    .actor-column {
+      flex: 1;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      min-width: 300px;
+    }
+
+    .actor-header {
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .h-farmer {
+      color: #27ae60;
+      border-color: #27ae60;
+    }
+
+    .h-distributor {
+      color: #2980b9;
+      border-color: #2980b9;
+    }
+
+    .h-retailer {
+      color: #8e44ad;
+      border-color: #8e44ad;
+    }
+
+
+    .card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 5px;
+    }
+
+    .btn-green {
+      background-color: #27ae60;
+    }
+
+    .btn-blue {
+      background-color: #2980b9;
+    }
+
+    .btn-purple {
+      background-color: #8e44ad;
+    }
+
+    .btn-orange {
+      background-color: #e67e22;
+    }
+
+    .btn:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #7f8c8d;
+    }
+
+    .log-box {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 10px;
+      border-radius: 5px;
+      height: 150px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      border-radius: 4px;
+      color: white;
+      background: #95a5a6;
+    }
+
+    .badge-pending {
+      background: #f39c12;
+    }
+
+    .badge-approved {
+      background: #3498db;
+    }
+
+    .badge-transferred {
+      background: #27ae60;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🚜 Supply Chain Simulator</h1>
+
+  <div class="container">
+    <!-- FARMER SECTION -->
+    <div class="actor-column">
+      <div class="actor-header h-farmer">
+        <h2>👨‍🌾 Farmer</h2>
+        <div id="farmerAuthStatus">🔴 Offline</div>
+      </div>
+
+      <!-- Login -->
+      <div id="farmerLoginBox">
+        <input type="text" id="fName" placeholder="Name" style="margin-bottom:5px;">
+        <input type="email" id="fEmail" placeholder="Email">
+        <input type="password" id="fPass" value="password123" placeholder="Password">
+        <div style="display:flex; gap:5px; margin-top:5px;">
+          <button class="btn btn-green" onclick="login('farmer')">Login</button>
+          <button class="btn btn-green" style="background:#2ecc71" onclick="register('farmer')">Register</button>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="farmerDashboard" class="hidden">
+        <h3>1. Post New Batch</h3>
+        <div class="card">
+          <input type="text" id="cropName" placeholder="Crop (e.g. Potato)" value="Organic Potato">
+          <div style="display:flex; gap:10px;">
+            <input type="number" id="qty" placeholder="Qty (kg)" value="50">
+            <input type="number" id="price" placeholder="Price/kg" value="20">
+          </div>
+          <button class="btn btn-green" onclick="postBatch()">🚀 Create Batch & Listing</button>
+        </div>
+
+        <h3>2. Incoming Orders</h3>
+        <div id="farmerOrdersList">
+          <p style="color:#7f8c8d; font-style:italic;">No orders yet...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DISTRIBUTOR SECTION -->
+    <div class="actor-column">
+      <div class="actor-header h-distributor">
+        <h2>🚚 Distributor</h2>
+        <div id="distributorAuthStatus">🔴 Offline</div>
+      </div>
+
+      <!-- Login -->
+      <div id="distributorLoginBox">
+        <input type="text" id="dName" placeholder="Name" style="margin-bottom:5px;">
+        <input type="email" id="dEmail" placeholder="Email">
+        <input type="password" id="dPass" value="password123" placeholder="Password">
+        <div style="display:flex; gap:5px; margin-top:5px;">
+          <button class="btn btn-blue" onclick="login('distributor')">Login</button>
+          <button class="btn btn-blue" style="background:#3498db" onclick="register('distributor')">Register</button>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="distributorDashboard" class="hidden">
+        <h3>3. Market (Available Listings)</h3>
+        <button class="btn btn-blue" onclick="loadMarket()" style="margin-bottom:10px;">🔄 Refresh Market</button>
+        <div id="marketList"></div>
+
+        <h3>4. My Orders</h3>
+        <div id="distributorOrdersList"></div>
+
+        <h3>5. My Inventory (For Resale)</h3>
+        <p style="font-size:0.8rem; color:#666;">Set price to resell to Retailers.</p>
+        <div id="distributorInventory"></div>
+      </div>
+    </div>
+
+    <!-- RETAILER SECTION -->
+    <div class="actor-column">
+      <div class="actor-header h-retailer">
+        <h2>🏪 Retailer</h2>
+        <div id="retailerAuthStatus">🔴 Offline</div>
+      </div>
+
+      <!-- Login -->
+      <div id="retailerLoginBox">
+        <input type="text" id="rName" placeholder="Name" style="margin-bottom:5px;">
+        <input type="email" id="rEmail" placeholder="Email">
+        <input type="password" id="rPass" value="password123" placeholder="Password">
+        <div style="display:flex; gap:5px; margin-top:5px;">
+          <button class="btn btn-purple" onclick="login('retailer')">Login</button>
+          <button class="btn btn-purple" style="background:#9b59b6" onclick="register('retailer')">Register</button>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="retailerDashboard" class="hidden">
+        <h3>6. Wholesale Market</h3>
+        <button class="btn btn-purple" onclick="loadWholesaleMarket()" style="margin-bottom:10px;">🔄 Refresh
+          Market</button>
+        <div id="wholesaleList"></div>
+
+        <h3>7. My Orders</h3>
+        <div id="retailerOrdersList"></div>
+
+        <h3>8. My Store Inventory</h3>
+        <div id="retailerInventory"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="log-box" id="systemLog">
+    Welcome to the Farm-to-Fork Simulator.
+    Please Login both users to begin testing.
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    let TOKENS = { farmer: null, distributor: null, retailer: null };
+    let IDS = { farmer: null, distributor: null, retailer: null };
+
+    function log(msg) {
+      const box = document.getElementById('systemLog');
+      const time = new Date().toLocaleTimeString();
+      box.innerHTML += `<div>[${time}] ${msg}</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // --- AUTH ---
+    function getAuthData(role) {
+      const prefix = role.charAt(0);
+      return {
+        name: document.getElementById(prefix + 'Name').value,
+        email: document.getElementById(prefix + 'Email').value,
+        password: document.getElementById(prefix + 'Pass').value
+      };
+    }
+
+    async function login(role) {
+      const { email, password } = getAuthData(role);
+      log(`Attempting login for ${role}...`);
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) handleAuthSuccess(role, data);
+        else log(`❌ Login Failed: ${data.message}`);
+
+      } catch (err) { log(`❌ Network Error: ${err.message}`); }
+    }
+
+    async function register(role) {
+      const { name, email, password } = getAuthData(role);
+      log(`Registering ${role}...`);
+
+      try {
+        const res = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, email, password, role,
+            location: { city: 'Test City' }
+          })
+        });
+        const data = await res.json();
+
+        if (res.ok) handleAuthSuccess(role, data);
+        else log(`❌ Register Failed: ${data.message}`);
+
+      } catch (err) { log(`❌ Network Error: ${err.message}`); }
+    }
+
+    function handleAuthSuccess(role, data) {
+      TOKENS[role] = data.token;
+      IDS[role] = data._id;
+
+      const statusDiv = document.getElementById(role + 'AuthStatus');
+      statusDiv.innerHTML = `
+           <div style="font-size:0.8rem; text-align:right;">
+             🟢 <b>${data.name}</b><br>
+             Wallet: ${data.walletAddress?.substring(0, 6)}...${data.walletAddress?.substring(38)}
+           </div>
+        `;
+
+      document.getElementById(role + 'LoginBox').classList.add('hidden');
+      document.getElementById(role + 'Dashboard').classList.remove('hidden');
+
+      log(`✅ ${role} Logged In (Wallet: ${data.walletAddress})`);
+
+      if (role === 'distributor') loadMarket();
+      if (role === 'farmer') loadMyOrders();
+      if (role === 'retailer') loadWholesaleMarket();
+    }
+
+    // --- FARMER ACTIONS ---
+    async function postBatch() {
+      if (!TOKENS.farmer) return alert('Farmer login required');
+
+      const payload = {
+        cropName: document.getElementById('cropName').value,
+        quantity: document.getElementById('qty').value,
+        pricePerKg: document.getElementById('price').value,
+        originLocation: "Simulation Farm",
+        harvestDate: new Date()
+      };
+
+      const res = await fetch(`${API_URL}/listings/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.farmer}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        log(`✅ Batch Posted! ID: ${data.batch.batchId}`);
+        log(`📋 Copy this ID to test Traceability: ${data.batch.batchId}`);
+      } else {
+        log(`❌ Posting Failed: ${data.message}`);
+      }
+    }
+
+    async function loadMyOrders() {
+      if (!TOKENS.farmer) return;
+      // Fetch orders logic for farmer
+      const res = await fetch(`${API_URL}/orders`, { headers: { 'Authorization': `Bearer ${TOKENS.farmer}` } });
+      const data = await res.json();
+
+      const list = document.getElementById('farmerOrdersList');
+      list.innerHTML = '';
+
+      // Sales = Orders where I am seller
+      if (!data.sales || data.sales.length === 0) list.innerHTML = '<p>No orders yet.</p>';
+
+      if (data.sales) {
+        data.sales.forEach(order => {
+          const crop = (order.listing && order.listing.batch) ? order.listing.batch.cropName : 'Unknown Item';
+          const buyerName = order.buyer ? order.buyer.name : 'Unknown';
+          const isPending = order.status === 'pending';
+
+          list.innerHTML += `
+                      <div class="card">
+                          <b>Order #${order._id.substring(20, 24)}</b> - ${order.status.toUpperCase()}<br>
+                          Buyer: ${buyerName}<br>
+                          Request: ${order.quantityRequest}kg of ${crop}<br>
+                          Total: ₹${order.totalPrice}
+                          ${isPending ? `<button class="btn btn-green" onclick="manageOrder('${order._id}', 'approved', 'farmer')">✅ Approve</button>` : ''}
+                      </div>
+                  `;
+        });
+      }
+    }
+
+    async function manageOrder(id, status, role) {
+      const token = TOKENS[role];
+      const res = await fetch(`${API_URL}/orders/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        log(`Order ${status.toUpperCase()} successfully.`);
+        if (role === 'farmer') loadMyOrders();
+        if (role === 'distributor') loadDistOrders();
+
+        // Refresh others
+        setTimeout(() => {
+          loadDistOrders();
+          loadRetailerOrders();
+        }, 1000);
+      }
+    }
+
+    // --- DISTRIBUTOR ACTIONS ---
+    async function loadMarket() {
+      if (!TOKENS.distributor) return;
+      const res = await fetch(`${API_URL}/listings`, { headers: { 'Authorization': `Bearer ${TOKENS.distributor}` } });
+      const listings = await res.json();
+
+      const list = document.getElementById('marketList');
+      list.innerHTML = '';
+
+      listings.forEach(l => {
+        // Don't show my own listings (Inventory) in Market
+        if (l.seller._id === IDS.distributor) {
+          renderInventoryItem(l); // Move to inventory
+          return;
+        }
+
+        list.innerHTML += `
+                    <div class="card">
+                        <b>${l.batch ? l.batch.cropName : 'Unknown'}</b><br>
+                        From: ${l.seller.name}<br>
+                        Available: ${l.quantityAvailable}kg @ ₹${l.pricePerKg}/kg<br>
+                        <input type="number" id="buyQty_${l._id}" value="2" style="width:60px; display:inline;">
+                        <button class="btn btn-blue" style="width:auto; display:inline;" onclick="buyItem('${l._id}')">Buy</button>
+                    </div>
+                `;
+      });
+    }
+
+    function renderInventoryItem(l) {
+      const inv = document.getElementById('distributorInventory');
+      // Check if already rendered to avoid dupes in this simple sim
+      if (inv.innerHTML.includes(l._id)) return;
+
+      const cardId = `inv_card_${l._id}`;
+
+      let statusHtml = `<span class="badge badge-pending">In Warehouse</span>`;
+      let actionHtml = `
+        <div style="margin-top:5px;">
+            <input type="number" id="resellPrice_${l._id}" placeholder="New Price" value="${parseInt(l.pricePerKg) + 5}" style="width:80px;">
+            <button class="btn btn-blue" onclick="activateListing('${l._id}')">📢 Sell to Retailer</button>
+        </div>
+      `;
+
+      if (l.isActive) {
+        statusHtml = `<span class="badge badge-transferred">Active on Market</span>`;
+        actionHtml = `<div style="margin-top:5px; font-size:0.8rem; color:green;">Listed @ ₹${l.pricePerKg}/kg</div>`;
+      }
+
+      inv.innerHTML += `
+                <div class="card" id="${cardId}" style="border-left: 5px solid #2980b9;">
+                    <b>${l.batch?.cropName}</b><br>
+                    Listing ID: ...${l._id.substring(20, 24)}<br>
+                    You own: ${l.quantityAvailable}kg<br>
+                    Status: ${statusHtml}
+                    ${actionHtml}
+                </div>
+            `;
+    }
+
+    async function activateListing(id) {
+      const newPrice = document.getElementById(`resellPrice_${id}`).value;
+      const res = await fetch(`${API_URL}/listings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.distributor}` },
+        body: JSON.stringify({ isActive: true, pricePerKg: newPrice })
+      });
+      if (res.ok) {
+        log(`Listing Activated for Resale!`);
+        // Refresh inventory visual by reloading market
+        document.getElementById('distributorInventory').innerHTML = ''; // Clear to force redraw
+        loadMarket();
+      }
+    }
+
+    // Auto refresh
+    setInterval(() => {
+      if (TOKENS.farmer) loadMyOrders();
+      if (TOKENS.distributor) loadDistOrders();
+      if (TOKENS.retailer) loadRetailerOrders();
+    }, 5000);
+
+    // --- RETAILER ACTIONS ---
+    async function loadWholesaleMarket() {
+      if (!TOKENS.retailer) return;
+      const res = await fetch(`${API_URL}/listings`, { headers: { 'Authorization': `Bearer ${TOKENS.retailer}` } });
+      const listings = await res.json();
+
+      const list = document.getElementById('wholesaleList');
+      list.innerHTML = '';
+
+      listings.forEach(l => {
+        // Don't show my own listings
+        if (l.seller._id === IDS.retailer) {
+          renderRetailerInventory(l);
+          return;
+        }
+
+        // Retailers usually buy from Distributors, but can buy from Farmers too.
+        // Let's identify the seller role
+        const sellerRole = l.seller.role || 'Unknown';
+        const tagColor = sellerRole === 'farmer' ? 'green' : 'blue';
+
+        list.innerHTML += `
+                <div class="card">
+                    <b>${l.batch ? l.batch.cropName : 'Unknown'}</b><br>
+                    From: <span style="color:${tagColor}; font-weight:bold;">${l.seller.name} (${sellerRole})</span><br>
+                    Available: ${l.quantityAvailable}kg @ ₹${l.pricePerKg}/kg<br>
+                    <input type="number" id="buyRetQty_${l._id}" value="2" style="width:60px; display:inline;">
+                    <button class="btn btn-purple" style="width:auto; display:inline;" onclick="retailerBuy('${l._id}')">Buy</button>
+                </div>
+            `;
+      });
+    }
+
+    async function retailerBuy(listingId) {
+      const qty = document.getElementById(`buyRetQty_${listingId}`).value;
+      log(`Retailer buying ${qty}kg...`);
+
+      const res = await fetch(`${API_URL}/orders/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.retailer}` },
+        body: JSON.stringify({ listingId, quantity: qty })
+      });
+
+      if (res.ok) {
+        log(`✅ Retailer Order Placed!`);
+        loadRetailerOrders();
+        // Simulate notifying distributor (seller)
+        setTimeout(loadDistOrders, 1000);
+      } else {
+        const d = await res.json();
+        log(`❌ Error: ${d.message}`);
+      }
+    }
+
+    async function loadRetailerOrders() {
+      if (!TOKENS.retailer) return;
+      const res = await fetch(`${API_URL}/orders`, { headers: { 'Authorization': `Bearer ${TOKENS.retailer}` } });
+      const data = await res.json();
+      const list = document.getElementById('retailerOrdersList');
+      list.innerHTML = '';
+
+      if (data.purchases) {
+        data.purchases.forEach(order => {
+          let actionBtn = '';
+          if (order.status === 'approved') {
+            actionBtn = `<button class="btn btn-orange" onclick="completeRetailerTx('${order._id}')">💰 Pay & Complete</button>`;
+          }
+          list.innerHTML += `
+                  <div class="card">
+                      Order #${order._id.substring(20, 24)}<br>
+                      Status: <span class="badge badge-${order.status}">${order.status}</span><br>
+                      ${actionBtn}
+                  </div>
+              `;
+        });
+      }
+    }
+
+    async function completeRetailerTx(id) {
+      const res = await fetch(`${API_URL}/orders/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.retailer}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        log(`Starting Retailer Pay... Success!`);
+        loadRetailerOrders();
+        loadWholesaleMarket();
+      }
+    }
+
+    function renderRetailerInventory(l) {
+      const inv = document.getElementById('retailerInventory');
+      if (inv.innerHTML.includes(l._id)) return;
+
+      inv.innerHTML += `
+            <div class="card" style="border-left: 5px solid #8e44ad;">
+                <b>${l.batch?.cropName}</b><br>
+                <small>Batch ID: ${l.batch?.batchId || l.batch?._id}</small><br>
+                Stock: ${l.quantityAvailable}kg<br>
+                <span class="badge badge-transferred">Ready for Consumer</span>
+            </div>
+        `;
+    }
+
+    async function buyItem(listingId) {
+      const qty = document.getElementById(`buyQty_${listingId}`).value;
+      log(`Requesting to buy ${qty}kg...`);
+
+      const res = await fetch(`${API_URL}/orders/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.distributor}` },
+        body: JSON.stringify({ listingId, quantity: qty })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        log(`✅ Order Placed! Waiting for Farmer approval.`);
+        loadDistOrders();
+        // Simulate notifying farmer
+        setTimeout(loadMyOrders, 1000);
+      } else {
+        log(`❌ Error: ${data.message}`);
+      }
+    }
+
+    async function loadDistOrders() {
+      if (!TOKENS.distributor) return;
+      const res = await fetch(`${API_URL}/orders`, { headers: { 'Authorization': `Bearer ${TOKENS.distributor}` } });
+      const data = await res.json();
+
+      const list = document.getElementById('distributorOrdersList');
+      list.innerHTML = '';
+
+      // 1. Sales (Incoming from Retailers)
+      if (data.sales && data.sales.length > 0) {
+        list.innerHTML += '<h4 style="margin:5px 0;">📥 Incoming Orders (To Approve)</h4>';
+        data.sales.forEach(order => {
+          const isPending = order.status === 'pending';
+          const buyerName = order.buyer ? order.buyer.name : 'Unknown Retailer';
+          list.innerHTML += `
+              <div class="card" style="border-left: 4px solid #e67e22;">
+                  <b>Order #${order._id.substring(20, 24)}</b> - ${order.status}<br>
+                  Buyer: ${buyerName}<br>
+                  Request: ${order.quantityRequest}kg<br>
+                  ${isPending ? `<button class="btn btn-green" onclick="manageOrder('${order._id}', 'approved', 'distributor')">✅ Approve Sale</button>` : ''}
+              </div>
+          `;
+        });
+      }
+
+      // 2. Purchases (Outgoing to Farmers)
+      if (data.purchases && data.purchases.length > 0) {
+        list.innerHTML += '<h4 style="margin:10px 0 5px;">📤 My Purchases</h4>';
+        data.purchases.forEach(order => {
+          let actionBtn = '';
+          // If Approved, allow "Payment/Complete"
+          if (order.status === 'approved') {
+            actionBtn = `<button class="btn btn-orange" onclick="completeTx('${order._id}')">💰 Pay & Complete Transfer</button>`;
+          }
+
+          list.innerHTML += `
+                      <div class="card">
+                          Order #${order._id.substring(20, 24)}<br>
+                          Status: <span class="badge badge-${order.status}">${order.status}</span><br>
+                          ${actionBtn}
+                      </div>
+                  `;
+        });
+      }
+    }
+
+    async function completeTx(id) {
+      log(`Simulating Payment for Order ${id}...`);
+      // Skip Razorpay, call backend complete
+      const res = await fetch(`${API_URL}/orders/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKENS.distributor}` }
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        log(`🎉 SUCCESS! Ownership Transferred.`);
+        log(`New Child Listing Created: ${data.childListingId}`);
+        loadDistOrders();
+        loadMarket(); // To update inventory
+      } else {
+        log(`❌ Transfer Failed: ${data.message}`);
+      }
+    }
+
+    // Auto refresh
+    setInterval(() => {
+      if (TOKENS.farmer) loadMyOrders();
+      if (TOKENS.distributor) loadDistOrders();
+    }, 5000);
+
+  </script>
+</body>
+
+</html>

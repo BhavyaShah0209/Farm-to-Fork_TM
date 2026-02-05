@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consumer Traceability</title>
+  <!-- QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #eef2f5;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      width: 100%;
+      max-width: 500px;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 12px 20px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .product-header {
+      text-align: center;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .product-title {
+      font-size: 1.5rem;
+      color: #27ae60;
+      margin: 5px 0;
+    }
+
+    .product-meta {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+      display: none;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #ddd;
+      border-radius: 2px;
+    }
+
+    .event {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .event::before {
+      content: '';
+      position: absolute;
+      left: -34px;
+      top: 5px;
+      width: 12px;
+      height: 12px;
+      background: #27ae60;
+      border: 4px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px #27ae60;
+    }
+
+    .event-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+
+    .role-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      color: white;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .role-farmer {
+      background: #27ae60;
+    }
+
+    .role-distributor {
+      background: #2980b9;
+    }
+
+    .role-retailer {
+      background: #8e44ad;
+    }
+
+    .date {
+      font-size: 0.8rem;
+      color: #95a5a6;
+      float: right;
+    }
+
+    .qr-section {
+      text-align: center;
+      margin-top: 40px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+      display: none;
+    }
+
+    #qrcode {
+      display: inline-block;
+      padding: 10px;
+      background: white;
+      border: 1px solid #eee;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>🔍 Trace Your Food</h1>
+
+    <div class="search-box">
+      <input type="text" id="batchIdInput" placeholder="Enter Batch ID (e.g. BATCH_173...)">
+      <button onclick="traceBatch()">Trace</button>
+    </div>
+
+    <div id="productHeader" class="product-header">
+      <h2 class="product-title" id="pName">Organic Potato</h2>
+      <div class="product-meta">
+        🌱 Origin: <span id="pOrigin">Punjab, India</span><br>
+        🚜 Harvested: <span id="pDate">Oct 24, 2024</span>
+      </div>
+    </div>
+
+    <div id="timeline" class="timeline">
+      <!-- Events will be injected here -->
+    </div>
+
+    <div id="qrSection" class="qr-section">
+      <p>Scan to verify authenticity</p>
+      <div id="qrcode"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    async function traceBatch() {
+      const batchId = document.getElementById('batchIdInput').value;
+      if (!batchId) return alert('Please enter a Batch ID');
+
+      try {
+        const res = await fetch(`${API_URL}/traceability/${batchId}`);
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message);
+
+        renderProduct(data);
+        generateQR(batchId);
+
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderProduct(batch) {
+      // Header
+      document.getElementById('pName').textContent = batch.cropName;
+      document.getElementById('pOrigin').textContent = batch.originLocation;
+      document.getElementById('pDate').textContent = new Date(batch.harvestDate).toLocaleDateString();
+      document.getElementById('productHeader').style.display = 'block';
+
+      // Timeline
+      const timeline = document.getElementById('timeline');
+      timeline.innerHTML = '';
+      timeline.style.display = 'block';
+
+      batch.journey.forEach(event => {
+        const date = new Date(event.date).toLocaleString();
+        const roleClass = `role-${event.role}`;
+
+        // If handler is populated object use .name, else use placeholder
+        const handlerName = event.handler ? event.handler.name : 'Unknown Handler';
+        const location = event.handler && event.handler.location ? event.handler.location.city : '';
+
+        timeline.innerHTML += `
+                    <div class="event">
+                        <div class="event-card">
+                            <span class="role-tag ${roleClass}">${event.role}</span>
+                            <span class="date">${date}</span>
+                            <div style="font-weight:bold; margin: 5px 0;">${event.action}</div>
+                            <div style="font-size:0.9rem; color:#555;">
+                                By: ${handlerName} ${location ? `(${location})` : ''}
+                            </div>
+                            ${event.transactionHash ? `<div style="font-size:0.7rem; color:#aaa; margin-top:5px;">TX: ${event.transactionHash.substring(0, 15)}...</div>` : ''}
+                        </div>
+                    </div>
+                `;
+      });
+
+      document.getElementById('qrSection').style.display = 'block';
+    }
+
+    function generateQR(text) {
+      const container = document.getElementById('qrcode');
+      container.innerHTML = ''; // Clear previous
+      new QRCode(container, {
+        text: window.location.href.split('?')[0] + '?id=' + text, // Link to this page with ID
+        width: 128,
+        height: 128
+      });
+    }
+
+    // Check if ID is in URL (simulating a scan)
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+    if (idFromUrl) {
+      document.getElementById('batchIdInput').value = idFromUrl;
+      traceBatch();
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Supply Chain Traceability</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1abc9c 0%, #2ecc71 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .auth-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 350px;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ecf0f1;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      cursor: pointer;
+      color: #95a5a6;
+      font-weight: 600;
+    }
+
+    .tab.active {
+      color: #2c3e50;
+      border-bottom: 2px solid #2ecc71;
+      margin-bottom: -2px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #7f8c8d;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: #27ae60;
+    }
+
+    .btn-secondary {
+      background: #3498db;
+      margin-top: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .message {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="auth-container">
+    <h2 style="text-align:center; color:#2c3e50; margin-top:0;">AgroChain</h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('login')">Login</div>
+      <div class="tab" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="lEmail" placeholder="Enter your email">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="lPass" placeholder="Enter password">
+      </div>
+      <button class="btn" onclick="handleLogin()">Login</button>
+      <div id="loginMsg" class="message"></div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerForm" class="hidden">
+
+      <!-- Step 1: Details -->
+      <div id="regStep1">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="rName" placeholder="John Doe">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="rRole">
+            <option value="farmer">👨‍🌾 Farmer</option>
+            <option value="distributor">🚚 Distributor</option>
+            <option value="retailer">🏪 Retailer</option>
+            <option value="consumer">🍽 Consumer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="rEmail" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="rPass" placeholder="Create password">
+        </div>
+        <div class="form-group">
+          <label>City / Locality</label>
+          <input type="text" id="rCity" placeholder="e.g. Mumbai">
+        </div>
+
+        <button class="btn" onclick="handleRegister()">Register</button>
+
+      </div>
+    </div>
+
+    <script>
+      const API_URL = 'http://localhost:5000/api';
+
+      function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+        if (tab === 'login') {
+          document.getElementById('loginForm').classList.remove('hidden');
+          document.getElementById('registerForm').classList.add('hidden');
+        } else {
+          document.getElementById('loginForm').classList.add('hidden');
+          document.getElementById('registerForm').classList.remove('hidden');
+        }
+      }
+
+      async function handleRegister() {
+        const name = document.getElementById('rName').value;
+        const email = document.getElementById('rEmail').value;
+        const password = document.getElementById('rPass').value;
+        const role = document.getElementById('rRole').value;
+
+        const cityEl = document.getElementById('rCity');
+        const city = cityEl ? cityEl.value : 'Unknown';
+
+        try {
+          const res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password, role, location: { city: city } })
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            alert(`Registration Successful!\nRole: ${role}\nWallet: ${data.walletAddress}`);
+            switchTab('login');
+          } else {
+            alert(data.message);
+          }
+
+        } catch (err) {
+          alert("Registration Failed");
+        }
+      }
+
+      async function handleLogin() {
+        const email = document.getElementById('lEmail').value;
+        const password = document.getElementById('lPass').value;
+        const msg = document.getElementById('loginMsg');
+
+        try {
+          const res = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            msg.textContent = "Success! Redirecting...";
+            msg.className = "message success";
+            // Store in local storage
+            localStorage.setItem('user_token', data.token);
+            localStorage.setItem('user_role', data.role);
+            localStorage.setItem('user_name', data.name);
+
+          } else {
+            msg.textContent = data.message;
+            msg.className = "message error";
+          }
+
+        } catch (err) {
+          msg.textContent = "Server Error";
+          msg.className = "message error";
+        }
+      }
+    </script>
+
+</body>
+
+</html>

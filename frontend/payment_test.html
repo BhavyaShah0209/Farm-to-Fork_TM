@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razorpay Test Simulator</title>
+  <!-- Load Razorpay SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .box {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.2rem;
+    }
+
+    input,
+    button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>💳 Payment Simulator</h1>
+
+  <!-- 1. Authentication Check -->
+  <div class="box" id="authBox">
+    <h2>1. Authentication Required</h2>
+    <p style="font-size: 0.9rem; color: #666;">We need a valid user token to secure the payment API.</p>
+    <input type="email" id="loginEmail" placeholder="Distributor Email" value="test@example.com">
+    <input type="password" id="loginPass" placeholder="Password" value="123456">
+    <button onclick="login()">Login to Proceed</button>
+    <div id="authStatus"></div>
+  </div>
+
+  <!-- 2. Payment Details -->
+  <div class="box hidden" id="paymentBox">
+    <h2>2. Simulate Payment</h2>
+
+    <label>Razorpay Key ID (Public)</label>
+    <input type="text" id="razorpayKey" placeholder="rzp_test_..." value="">
+    <small style="color: #666; display: block; margin-bottom: 10px;">Find this in your Razorpay Dashboard > Settings >
+      API Keys</small>
+
+    <label>Payment Amount (INR)</label>
+    <input type="number" id="payAmount" placeholder="Amount" value="500">
+
+    <button onclick="initiatePayment()" id="payBtn">Pay Now</button>
+
+    <div id="paymentStatus"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    let AUTH_TOKEN = '';
+
+    // --- Step 1: Login ---
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPass').value;
+      const statusDiv = document.getElementById('authStatus');
+
+      statusDiv.className = '';
+      statusDiv.innerHTML = 'Logging in...';
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          AUTH_TOKEN = data.token;
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = '✅ Logged in as ' + data.name + ' (' + data.role + ')';
+          document.getElementById('paymentBox').classList.remove('hidden');
+          document.getElementById('authBox').style.opacity = '0.5';
+        } else {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = '❌ ' + (data.message || 'Login failed');
+        }
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = '❌ Server Error: ' + err.message;
+      }
+    }
+
+    // --- Step 2: Create Order ---
+    async function initiatePayment() {
+      const amount = document.getElementById('payAmount').value;
+      const keyId = document.getElementById('razorpayKey').value;
+      const statusDiv = document.getElementById('paymentStatus');
+
+      if (!keyId) {
+        alert("Please enter your Razorpay Key ID!");
+        return;
+      }
+
+      statusDiv.className = '';
+      statusDiv.innerHTML = 'Creating Order...';
+      document.getElementById('payBtn').disabled = true;
+
+      try {
+        // 1. Call Backend to Create Order
+        const res = await fetch(`${API_URL}/payments/create-order`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${AUTH_TOKEN}`
+          },
+          body: JSON.stringify({ amount, currency: 'INR' })
+        });
+        const order = await res.json();
+
+        if (!res.ok) throw new Error(order.message || 'Order creation failed');
+
+        statusDiv.innerHTML = `Order Created (${order.id}). Opening Checkout...`;
+
+        // 2. Open Razorpay Checkout
+        const options = {
+          key: keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: "Farm-to-Fork",
+          description: "Produce Batch Payment",
+          order_id: order.id,
+          handler: async function (response) {
+            // 3. Verify Payment on Backend
+            statusDiv.innerHTML = 'Payment successful. Verifying signature...';
+            await verifyBackend(response);
+          },
+          prefill: {
+            name: "Test Distributor",
+            email: "distributor@example.com",
+            contact: "9999999999"
+          },
+          theme: { color: "#3399cc" }
+        };
+
+        const rzp1 = new Razorpay(options);
+        rzp1.open();
+
+        rzp1.on('payment.failed', function (response) {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = `❌ Payment Failed: ${response.error.description}`;
+          document.getElementById('payBtn').disabled = false;
+        });
+
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = '❌ Error: ' + err.message;
+        document.getElementById('payBtn').disabled = false;
+      }
+    }
+
+    // --- Step 3: Verify Signature ---
+    async function verifyBackend(paymentResponse) {
+      const statusDiv = document.getElementById('paymentStatus');
+      try {
+        const res = await fetch(`${API_URL}/payments/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${AUTH_TOKEN}`
+          },
+          body: JSON.stringify({
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_signature: paymentResponse.razorpay_signature
+          })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = '✅ PAYMENT VERIFIED! Server confirmed signature.';
+        } else {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = '❌ Verification Failed: ' + data.message;
+        }
+      } catch (err) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = '❌ Verification Error: ' + err.message;
+      }
+      document.getElementById('payBtn').disabled = false;
+    }
+  </script>
+</body>
+
+</html>
