@@ -7,13 +7,36 @@ import FarmerDashboard from './pages/FarmerDashboard';
 import Orders from './pages/Orders';
 import NotificationToast from './components/NotificationToast'; // Import Notification
 import './AppModern.css';
+import { useEffect } from 'react';
 
 // Navbar Component to handle active states nicely
 const Navbar = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path ? 'active' : '';
+  useEffect(() => {
+    // Define callback FIRST
+    window.googleTranslateElementInit = () => {
+      new window.google.translate.TranslateElement(
+        {
+          pageLanguage: "en",
+          includedLanguages: "en,hi,fr,de,zh",
+          layout : window.google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        "google_translate_element"
+      );
+    };
+
+    // Load script
+    const script = document.createElement("script");
+    script.src =
+      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
 
   return (
+    
     <div className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">Farm2Fork</Link>
@@ -31,7 +54,9 @@ const Navbar = () => {
 
 function App() {
   return (
-    <Router>
+    
+      <Router>
+      <div id="google_translate_element">
       <div className="app-layout">
         <NotificationToast />
         <Navbar />
@@ -46,7 +71,10 @@ function App() {
           </Routes>
         </main>
       </div>
+      </div>
     </Router>
+    
+    
   );
 }
 
