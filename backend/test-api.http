@@ -1,0 +1,95 @@
+### STEP 1: Register Farmer
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Farmer",
+  "mobile": "9876543210",
+  "password": "password123",
+  "role": "farmer"
+}
+
+### STEP 2: Register Distributor
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Distributor",
+  "mobile": "9876543211",
+  "password": "password123",
+  "role": "distributor"
+}
+
+### STEP 3: Login Farmer (COPY THE TOKEN!)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "mobile": "9876543210",
+  "password": "password123"
+}
+
+### STEP 4: Login Distributor (COPY THE TOKEN!)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "mobile": "9876543211",
+  "password": "password123"
+}
+
+### STEP 5: Create Batch & Listing - PASTE FARMER TOKEN (Copy listing _id from response)
+POST http://localhost:5000/api/listings/create
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjMzNzZmOTdkZTNmMmU5N2I1YyIsImlhdCI6MTc3MDI4ODY5OSwiZXhwIjoxNzcyODgwNjk5fQ.c7MaKg-5GlzCmFKZPAC6a8O66jTbeD-UV-_cHTA8OKc
+Content-Type: application/json
+
+{
+  "cropName": "Tomato",
+  "quantity": 100,
+  "pricePerKg": 50,
+  "harvestDate": "2026-02-01",
+  "originLocation": "Farm Location, State"
+}
+
+### STEP 6: Get All Listings - PASTE FARMER TOKEN
+GET http://localhost:5000/api/listings
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjMzNzZmOTdkZTNmMmU5N2I1YyIsImlhdCI6MTc3MDI4ODY5OSwiZXhwIjoxNzcyODgwNjk5fQ.c7MaKg-5GlzCmFKZPAC6a8O66jTbeD-UV-_cHTA8OKc
+
+### STEP 7: Create Order - PASTE DISTRIBUTOR TOKEN & LISTING_ID (Copy order _id from response)
+POST http://localhost:5000/api/orders/create
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+Content-Type: application/json
+
+{
+  "listingId": "698476b276f97de3f2e97b68",
+  "quantity": 10
+}
+
+### STEP 8: Get All Orders - PASTE DISTRIBUTOR TOKEN
+GET http://localhost:5000/api/orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+
+### STEP 9: Create/Get Chat - PASTE DISTRIBUTOR TOKEN & ORDER_ID (Copy chat _id from response)
+POST http://localhost:5000/api/chats/order/698476fc76f97de3f2e97b78
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODc3MiwiZXhwIjoxNzcyODgwNzcyfQ.OTadr4TBhsMP-QquEuNWDga40ica6mk1PeZnUGA3eJw
+
+### STEP 10: Send Message - PASTE ANY TOKEN & CHAT_ID
+POST http://localhost:5000/api/chats/6984771876f97de3f2e97b92/message
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4ODkyOSwiZXhwIjoxNzcyODgwOTI5fQ.beN0RimhF2zg3bCPWMYyrFrE_DpMWR6V0kp1UQpDnFw
+Content-Type: application/json
+
+{
+  "content": "Hello! Is this produce still available?"
+}
+
+### STEP 11: Get All Chats - PASTE ANY TOKEN
+GET http://localhost:5000/api/chats
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTA3NywiZXhwIjoxNzcyODgxMDc3fQ.Kw5_PywXnfY9QK6cChGv9bg3WbEoTBDjY4yn6H8NOjM
+
+### STEP 12: Get Specific Chat - PASTE ANY TOKEN & CHAT_ID
+GET http://localhost:5000/api/chats/6984771876f97de3f2e97b92
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTA3NywiZXhwIjoxNzcyODgxMDc3fQ.Kw5_PywXnfY9QK6cChGv9bg3WbEoTBDjY4yn6H8NOjM
+
+### Get Unread Count - PASTE ANY TOKEN
+GET http://localhost:5000/api/chats/unread/count
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ODQ3NjM2NzZmOTdkZTNmMmU5N2I1ZiIsImlhdCI6MTc3MDI4OTE0NiwiZXhwIjoxNzcyODgxMTQ2fQ.3HCqeBox-hsas9Lm1kQpYwnliFlffXB60QYlDof79pY
