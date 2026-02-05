@@ -20,6 +20,16 @@ export default function Orders() {
     }
     setUser(userData);
     fetchOrders();
+
+    // Dynamically load Razorpay SDK
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
   }, [navigate]);
 
   const fetchOrders = async () => {
@@ -49,16 +59,103 @@ export default function Orders() {
     }
   };
 
-  const handleCompleteOrder = async (orderId) => {
+  const completeOrderTransfer = async (orderId, paymentId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`/api/orders/${orderId}/complete`, {}, {
+      const res = await axios.post(`/api/orders/${orderId}/complete`, { paymentId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert("✅ Ownership Transferred! You can now sell this produce.");
+      alert("✅ Payment Verified & Ownership Transferred! You can now sell this produce.");
       fetchOrders();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to complete order");
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to complete order transfer after payment");
+    }
+  };
+
+  const handlePayment = async (order) => {
+    const token = localStorage.getItem('token');
+
+    try {
+      // 1. Create Order in Backend (Razorpay)
+      const { data: orderData } = await axios.post('/api/payments/create-order', {
+        amount: order.totalPrice,
+        currency: "INR",
+        receipt: `receipt_${order._id}`
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // 2. Handler for Razorpay or Test Mode
+      if (orderData.isTest) {
+        // SIMULATED TEST MODE (No Razorpay Popup)
+        const confirmPayment = window.confirm(`[TEST MODE] Simulate payment of ₹${orderData.amount / 100}?`);
+        if (confirmPayment) {
+          // Mock response that verifyPayment expects
+          const mockResponse = {
+            razorpay_order_id: orderData.id,
+            razorpay_payment_id: `pay_test_${Date.now()}`,
+            razorpay_signature: 'mock_signature'
+          };
+
+          // Verify (will hit the test verification block in backend)
+          const verifyRes = await axios.post('/api/payments/verify', mockResponse, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (verifyRes.data.success) {
+            await completeOrderTransfer(order._id, mockResponse.razorpay_payment_id);
+          }
+        }
+      } else {
+        // REAL RAZORPAY MODE
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: "Farm to Fork",
+          description: `Payment for Order #${order._id.substring(order._id.length - 6)}`,
+          order_id: orderData.id,
+          handler: async function (response) {
+            // 3. Verify Payment
+            try {
+              const verifyRes = await axios.post('/api/payments/verify', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+
+              if (verifyRes.data.success) {
+                // 4. Complete Order Transfer Logic
+                await completeOrderTransfer(order._id, response.razorpay_payment_id);
+              } else {
+                alert("Payment verification failed!");
+              }
+            } catch (error) {
+              console.error(error);
+              alert("Payment verification error");
+            }
+          },
+          prefill: {
+            name: user.name,
+            email: user.email,
+            contact: user.mobile
+          },
+          theme: {
+            color: "#2ecc71"
+          }
+        };
+
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.open();
+      }
+
+    } catch (err) {
+      console.error(err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || "Failed to initiate payment";
+      alert(`Payment Error: ${errorMsg}`);
     }
   };
 
@@ -116,7 +213,7 @@ export default function Orders() {
                   {o.status === 'approved' && (
                     <button
                       className="btn btn-orange"
-                      onClick={() => handleCompleteOrder(o._id)}
+                      onClick={() => handlePayment(o)}
                     >
                       💰 Pay & Transfer Ownership
                     </button>
