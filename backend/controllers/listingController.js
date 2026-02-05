@@ -9,7 +9,7 @@ const createBatchAndListing = async (req, res) => {
   const { cropName, quantity, pricePerKg, harvestDate, originLocation } = req.body;
   const seller = req.user._id;
 
-  if (!req.user.role === 'farmer') {
+  if (req.user.role !== 'farmer') {
     return res.status(403).json({ message: 'Only farmers can create fresh batches' });
   }
 

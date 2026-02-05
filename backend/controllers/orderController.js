@@ -28,10 +28,21 @@ const createOrder = async (req, res) => {
       seller: listing.seller._id,
       quantityRequest: quantity,
       totalPrice,
-      status: 'pending'
+      status: 'pending',
+      chatEnabled: true
     });
 
-    res.status(201).json({ message: 'Order created, waiting for approval', order });
+    // Populate order details for response
+    const populatedOrder = await Order.findById(order._id)
+      .populate('listing')
+      .populate('seller', 'name role email mobile')
+      .populate('buyer', 'name role email mobile');
+
+    res.status(201).json({
+      message: 'Order created, waiting for approval. You can now chat with the seller.',
+      order: populatedOrder,
+      chatAvailable: true
+    });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -117,15 +128,21 @@ const completeOrder = async (req, res) => {
       return res.status(400).json({ message: 'Order must be approved by seller first' });
     }
 
+    const parentListing = await Listing.findById(order.listing._id);
+    if (parentListing.quantityAvailable < order.quantityRequest) {
+      // Fail safely if stock is gone
+      return res.status(400).json({ message: 'Insufficient stock available to complete this order.' });
+    }
+
     // 1. Update Order Status
     order.status = 'transferred'; // Skipping 'paid' for now
     await order.save();
 
     // 2. Reduce Parent Listing Quantity
-    const parentListing = await Listing.findById(order.listing._id);
     parentListing.quantityAvailable -= order.quantityRequest;
     if (parentListing.quantityAvailable <= 0) {
       parentListing.isActive = false;
+      parentListing.quantityAvailable = 0; // Ensure no negative
     }
     await parentListing.save();
 

@@ -1,29 +1,26 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-// Initialize Razorpay
-let razorpay;
-try {
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-  } else {
-    console.warn('Razorpay keys missing. Payment features disabled.');
-  }
-} catch (error) {
-  console.warn('Razorpay initialization failed:', error.message);
+// Initialize Razorpay only if credentials are provided
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+  console.log('Razorpay initialized successfully');
+} else {
+  console.warn('⚠️  Razorpay credentials missing. Payment features disabled.');
 }
 
 // @desc    Create a payment order
 // @route   POST /api/payments/create-order
 // @access  Private
 const createOrder = async (req, res) => {
-  const { amount, currency = 'INR', receipt } = req.body;
-
   if (!razorpay) {
-    return res.status(503).json({ message: 'Payment service unavailable (configuration missing)' });
+    return res.status(503).json({
+      message: 'Payment service unavailable. Razorpay credentials not configured.'
+    });
   }
 
   try {
@@ -45,11 +42,13 @@ const createOrder = async (req, res) => {
 // @route   POST /api/payments/verify
 // @access  Private
 const verifyPayment = async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-  if (!process.env.RAZORPAY_KEY_SECRET) {
-    return res.status(503).json({ message: 'Payment service unavailable (secret missing)' });
+  if (!razorpay || !process.env.RAZORPAY_KEY_SECRET) {
+    return res.status(503).json({
+      message: 'Payment service unavailable. Razorpay credentials not configured.'
+    });
   }
+
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
   const body = razorpay_order_id + '|' + razorpay_payment_id;
 

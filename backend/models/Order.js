@@ -18,7 +18,10 @@ const orderSchema = new mongoose.Schema({
   paymentId: String,
 
   // Blockchain Transaction Hash (Proof of ownership transfer)
-  txHash: String
+  txHash: String,
+
+  // Chat enabled for this order
+  chatEnabled: { type: Boolean, default: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);
