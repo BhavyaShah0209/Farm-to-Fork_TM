@@ -116,9 +116,10 @@ const updateOrderStatus = async (req, res) => {
 
 // @desc    Simulate Payment & Transfer Ownership
 // @route   POST /api/orders/:id/complete
-// @access  Private (Simulated by System/Buyer for now since NO Razorpay)
+// @access  Private
 const completeOrder = async (req, res) => {
   const orderId = req.params.id;
+  const { paymentId } = req.body; // Receive paymentId from frontend
 
   try {
     const order = await Order.findById(orderId)
@@ -138,6 +139,7 @@ const completeOrder = async (req, res) => {
       return res.status(400).json({ message: 'Insufficient stock available to complete this order.' });
     }
 
+<<<<<<< HEAD
     const batch = await Batch.findById(parentListing.batch);
     
     // Generate IDs for blockchain
@@ -187,6 +189,14 @@ const completeOrder = async (req, res) => {
 
     // 1. Update Order Status
     order.status = 'transferred';
+=======
+    // 1. Update Order Status & Payment Info
+    order.status = 'transferred';
+    if (paymentId) {
+      order.paymentId = paymentId;
+      order.status = 'transferred'; // Or 'paid' then 'traceability' logic
+    }
+>>>>>>> b2e4b413fc17446047a51706d64dcfd609c6b55e
     await order.save();
 
     // 2. Reduce Parent Listing Quantity
