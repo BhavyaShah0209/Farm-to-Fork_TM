@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Listing = require('../models/Listing');
 const Batch = require('../models/Batch');
+const { transferBatch, splitBatch } = require('../utils/blockchain');
 
 // @desc    Distributor requests to buy from a listing
 // @route   POST /api/orders/create
@@ -121,7 +122,11 @@ const completeOrder = async (req, res) => {
   const { paymentId } = req.body; // Receive paymentId from frontend
 
   try {
-    const order = await Order.findById(orderId).populate('listing').populate('buyer');
+    const order = await Order.findById(orderId)
+      .populate('listing')
+      .populate('buyer')
+      .populate('seller');
+      
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     // Check if approved
@@ -131,54 +136,117 @@ const completeOrder = async (req, res) => {
 
     const parentListing = await Listing.findById(order.listing._id);
     if (parentListing.quantityAvailable < order.quantityRequest) {
-      // Fail safely if stock is gone
       return res.status(400).json({ message: 'Insufficient stock available to complete this order.' });
     }
 
+<<<<<<< HEAD
+    const batch = await Batch.findById(parentListing.batch);
+    
+    // Generate IDs for blockchain
+    const buyerId = `${order.buyer.role.toUpperCase()}_${order.buyer._id.toString().slice(-8)}`;
+    const sellerId = `${order.seller.role.toUpperCase()}_${order.seller._id.toString().slice(-8)}`;
+    
+    console.log(`\n🔄 Completing order ${orderId}`);
+    console.log(`   Batch: ${batch.batchId}`);
+    console.log(`   From: ${order.seller.name} (${sellerId})`);
+    console.log(`   To: ${order.buyer.name} (${buyerId})`);
+    console.log(`   Quantity: ${order.quantityRequest}kg`);
+
+    // Decide: Transfer entire batch OR Split it
+    let blockchainTx;
+    let childBatchId = null;
+
+    try {
+      if (parentListing.quantityAvailable === order.quantityRequest) {
+        // 🔥 TRANSFER ENTIRE BATCH - SHOWS IN TENDERLY!
+        console.log(`   📦 Transferring entire batch...`);
+        blockchainTx = await transferBatch(batch.batchId, buyerId);
+        console.log(`   ✅ Transfer tx: ${blockchainTx.txHash}`);
+        
+      } else {
+        // 🔥 SPLIT BATCH - SHOWS IN TENDERLY!
+        childBatchId = `${batch.batchId}_SPLIT_${Date.now()}`;
+        console.log(`   ✂️  Splitting batch into child: ${childBatchId}`);
+        
+        blockchainTx = await splitBatch(
+          batch.batchId,
+          childBatchId,
+          order.quantityRequest,
+          buyerId,
+          `split-${Date.now()}` // metadata hash
+        );
+        
+        console.log(`   ✅ Split tx: ${blockchainTx.txHash}`);
+        console.log(`   📋 Child batch: ${childBatchId}`);
+      }
+      
+      console.log(`   🔗 View in Tenderly: https://dashboard.tenderly.co/tx/${blockchainTx.txHash}`);
+      
+    } catch (blockchainError) {
+      console.error(`   ❌ Blockchain error:`, blockchainError.message);
+      blockchainTx = { txHash: null, error: blockchainError.message };
+    }
+
+    // 1. Update Order Status
+    order.status = 'transferred';
+=======
     // 1. Update Order Status & Payment Info
     order.status = 'transferred';
     if (paymentId) {
       order.paymentId = paymentId;
       order.status = 'transferred'; // Or 'paid' then 'traceability' logic
     }
+>>>>>>> b2e4b413fc17446047a51706d64dcfd609c6b55e
     await order.save();
 
     // 2. Reduce Parent Listing Quantity
     parentListing.quantityAvailable -= order.quantityRequest;
     if (parentListing.quantityAvailable <= 0) {
       parentListing.isActive = false;
-      parentListing.quantityAvailable = 0; // Ensure no negative
+      parentListing.quantityAvailable = 0;
     }
     await parentListing.save();
 
     // 3. Update Batch Journey (Traceability)
-    const batch = await Batch.findById(parentListing.batch);
     batch.journey.push({
       handler: order.buyer._id,
-      role: order.buyer.role, // Dynamic role (Distributor/Retailer)
+      role: order.buyer.role,
       action: 'Bought',
-      date: new Date()
+      date: new Date(),
+      transactionHash: blockchainTx.txHash || 'pending'
     });
     await batch.save();
 
-    // 4. Create CHILD Listing (The "Repost")
-    // Distributor now owns this portion and can resell it
+    // 4. Create CHILD Listing
     const childListing = await Listing.create({
       batch: batch._id,
       seller: order.buyer,
       parentListing: parentListing._id,
       quantityAvailable: order.quantityRequest,
-      pricePerKg: parentListing.pricePerKg, // Default to bought price, they can update later
-      isActive: false // Inactive until they choose to sell
+      pricePerKg: parentListing.pricePerKg,
+      isActive: false
     });
+
+    console.log(`   ✅ Order completed - Check Tenderly for BatchTransferred event!\n`);
 
     res.json({
       message: 'Order Completed & Ownership Transferred',
       childListingId: childListing._id,
-      order
+      order,
+      blockchain: {
+        txHash: blockchainTx.txHash,
+        batchId: batch.batchId,
+        childBatchId: childBatchId,
+        fromId: sellerId,
+        toId: buyerId,
+        tenderlyUrl: blockchainTx.txHash 
+          ? `https://dashboard.tenderly.co/aarushee_p/tedhemedhes/testnet/TMtestnet1/tx/${blockchainTx.txHash}`
+          : null
+      }
     });
 
   } catch (error) {
+    console.error('❌ Error completing order:', error);
     res.status(500).json({ message: error.message });
   }
 };
