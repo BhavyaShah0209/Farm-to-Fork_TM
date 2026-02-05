@@ -2,16 +2,29 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
 // Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay;
+try {
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  } else {
+    console.warn('Razorpay keys missing. Payment features disabled.');
+  }
+} catch (error) {
+  console.warn('Razorpay initialization failed:', error.message);
+}
 
 // @desc    Create a payment order
 // @route   POST /api/payments/create-order
 // @access  Private
 const createOrder = async (req, res) => {
   const { amount, currency = 'INR', receipt } = req.body;
+
+  if (!razorpay) {
+    return res.status(503).json({ message: 'Payment service unavailable (configuration missing)' });
+  }
 
   try {
     const options = {
@@ -33,6 +46,10 @@ const createOrder = async (req, res) => {
 // @access  Private
 const verifyPayment = async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!process.env.RAZORPAY_KEY_SECRET) {
+    return res.status(503).json({ message: 'Payment service unavailable (secret missing)' });
+  }
 
   const body = razorpay_order_id + '|' + razorpay_payment_id;
 
