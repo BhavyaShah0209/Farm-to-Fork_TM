@@ -29,7 +29,11 @@ let contract;
 const initBlockchain = () => {
   try {
     const rpcUrl = process.env.BLOCKCHAIN_RPC_URL;
-    contractAddress = process.env.CONTRACT_ADDRESS || "0xdb544459eebf51ee30d45c278d0b1a8c628c7947";
+    contractAddress = process.env.CONTRACT_ADDRESS;
+    if (!contractAddress) {
+      console.error("❌ CRITICAL ERROR: CONTRACT_ADDRESS is missing in .env file");
+      return;
+    }
 
     if (!rpcUrl) {
       console.warn("⚠️  BLOCKCHAIN_RPC_URL not found. Blockchain features disabled.");
