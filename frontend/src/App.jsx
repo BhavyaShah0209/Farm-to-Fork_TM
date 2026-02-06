@@ -7,45 +7,51 @@ import FarmerDashboard from './pages/FarmerDashboard';
 import Orders from './pages/Orders';
 import NotificationToast from './components/NotificationToast'; // Import Notification
 import './AppModern.css';
-import { useEffect } from 'react';
+import { useEffect ,useState} from 'react';
+import { useNavigate } from "react-router-dom";
 
-// Navbar Component to handle active states nicely
 const Navbar = () => {
   const location = useLocation();
-  const isActive = (path) => location.pathname === path ? 'active' : '';
+  const navigate = useNavigate();
+
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
+
+  const isActive = (path) =>
+    location.pathname === path ? "active" : "";
+
   useEffect(() => {
-    // Define callback FIRST
-    window.googleTranslateElementInit = () => {
-      new window.google.translate.TranslateElement(
-        {
-          pageLanguage: "en",
-          includedLanguages: "en,hi,fr,de,zh",
-          layout : window.google.translate.TranslateElement.InlineLayout.SIMPLE
-        },
-        "google_translate_element"
-      );
-    };
+    setIsLoggedIn(!!localStorage.getItem("token"));
+  }, [location]);
 
-    // Load script
-    const script = document.createElement("script");
-    script.src =
-      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    document.body.appendChild(script);
-  }, []);
-
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentUser");
+    setIsLoggedIn(false);
+    navigate("/login");
+  };
 
   return (
-    
     <div className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">Farm2Fork</Link>
+
         <nav className="navbar-links">
-          <Link to="/" className={`nav-link ${isActive('/')}`}>Market</Link>
-          <Link to="/orders" className={`nav-link ${isActive('/orders')}`}>Orders</Link>
-          <Link to="/farmer-dashboard" className={`nav-link ${isActive('/farmer-dashboard')}`}>Dashboard</Link>
-          <Link to="/traceability" className={`nav-link ${isActive('/traceability')}`}>Traceability</Link>
-          <Link to="/login" className="btn btn-primary nav-btn">Login</Link>
+          <Link to="/" className={`nav-link ${isActive("/")}`}>Market</Link>
+          <Link to="/orders" className={`nav-link ${isActive("/orders")}`}>Orders</Link>
+          <Link to="/farmer-dashboard" className={`nav-link ${isActive("/farmer-dashboard")}`}>Dashboard</Link>
+          <Link to="/traceability" className={`nav-link ${isActive("/traceability")}`}>Traceability</Link>
+
+          {isLoggedIn ? (
+            <button onClick={handleLogout} className="btn btn-primary nav-btn">
+              Logout
+            </button>
+          ) : (
+            <Link to="/login" className="btn btn-primary nav-btn">
+              Login
+            </Link>
+          )}
         </nav>
       </div>
     </div>
