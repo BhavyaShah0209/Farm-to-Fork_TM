@@ -31,7 +31,13 @@ export default function Traceability() {
 
     try {
       const res = await axios.get(`/api/traceability/${id}`);
-      setBatchData(res.data);
+      // Adapt to new backend structure { dbData, blockchainData } or old { ...dbData }
+      if (res.data.dbData || res.data.blockchainData) {
+        setBatchData(res.data);
+      } else {
+        // Fallback if structure didn't change (legacy)
+        setBatchData({ dbData: res.data });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Traceability data not found');
     } finally {
@@ -63,19 +69,19 @@ export default function Traceability() {
 
       {error && <p className="error-text">{error}</p>}
 
-      {batchData && (
+      {batchData && batchData.dbData && (
         <div className="result-area">
           <div className="product-header">
-            <h2 className="product-title">{batchData.cropName}</h2>
+            <h2 className="product-title">{batchData.dbData.cropName}</h2>
             <div className="product-meta">
-              <p>🌱 <strong>Origin:</strong> {batchData.originLocation}</p>
-              <p>🚜 <strong>Harvested:</strong> {new Date(batchData.harvestDate).toLocaleDateString()}</p>
-              <p>🔢 <strong>Current Qty:</strong> {batchData.quantityInitial} kg</p>
+              <p>🌱 <strong>Origin:</strong> {batchData.dbData.originLocation}</p>
+              <p>🚜 <strong>Harvested:</strong> {new Date(batchData.dbData.harvestDate).toLocaleDateString()}</p>
+              <p>🔢 <strong>Current Qty:</strong> {batchData.dbData.quantityInitial} kg</p>
             </div>
           </div>
 
           <div className="timeline">
-            {batchData.journey.map((event, index) => (
+            {batchData.dbData.journey.map((event, index) => (
               <div key={index} className="event">
                 <div className="event-card">
                   <span className={`role-tag role-${event.role}`}>{event.role}</span>
@@ -89,13 +95,25 @@ export default function Traceability() {
 
                   {event.transactionHash && (
                     <div className="tx-hash">
-                      ⛓ Blockchain TX: <a href="#" title={event.transactionHash}>{event.transactionHash.substring(0, 15)}...</a>
+                      ⛓ Blockchain TX: <a href={`https://dashboard.tenderly.co/tx/${event.transactionHash}`} target="_blank" rel="noopener noreferrer" title={event.transactionHash}>{event.transactionHash.substring(0, 15)}...</a>
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+
+          {batchData.blockchainData && (
+            <div className="blockchain-verification">
+              <h3>⛓ On-Chain Verification</h3>
+              <div className="code-block">
+                <p><strong>Status:</strong> {['CREATED', 'SPLIT', 'TRANSFERRED', 'SOLD'][batchData.blockchainData.status]}</p>
+                <p><strong>Holder:</strong> {batchData.blockchainData.holderId}</p>
+                <p><strong>Events:</strong> {batchData.blockchainData.history.length}</p>
+                <pre>{JSON.stringify(batchData.blockchainData, null, 2)}</pre>
+              </div>
+            </div>
+          )}
 
           <div className="qr-section">
             <p>Scan to verify authenticity on mobile</p>

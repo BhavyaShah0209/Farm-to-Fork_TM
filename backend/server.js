@@ -1,11 +1,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
+
+// Load environment variables FIRST
+dotenv.config();
+
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { initBlockchain } = require('./utils/blockchain');
-
-// Load environment variables
-dotenv.config();
 
 // Connect to database
 const startServer = async () => {

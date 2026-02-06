@@ -126,7 +126,7 @@ const completeOrder = async (req, res) => {
       .populate('listing')
       .populate('buyer')
       .populate('seller');
-      
+
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     // Check if approved
@@ -139,13 +139,12 @@ const completeOrder = async (req, res) => {
       return res.status(400).json({ message: 'Insufficient stock available to complete this order.' });
     }
 
-<<<<<<< HEAD
     const batch = await Batch.findById(parentListing.batch);
-    
+
     // Generate IDs for blockchain
     const buyerId = `${order.buyer.role.toUpperCase()}_${order.buyer._id.toString().slice(-8)}`;
     const sellerId = `${order.seller.role.toUpperCase()}_${order.seller._id.toString().slice(-8)}`;
-    
+
     console.log(`\n🔄 Completing order ${orderId}`);
     console.log(`   Batch: ${batch.batchId}`);
     console.log(`   From: ${order.seller.name} (${sellerId})`);
@@ -162,12 +161,12 @@ const completeOrder = async (req, res) => {
         console.log(`   📦 Transferring entire batch...`);
         blockchainTx = await transferBatch(batch.batchId, buyerId);
         console.log(`   ✅ Transfer tx: ${blockchainTx.txHash}`);
-        
+
       } else {
         // 🔥 SPLIT BATCH - SHOWS IN TENDERLY!
         childBatchId = `${batch.batchId}_SPLIT_${Date.now()}`;
         console.log(`   ✂️  Splitting batch into child: ${childBatchId}`);
-        
+
         blockchainTx = await splitBatch(
           batch.batchId,
           childBatchId,
@@ -175,28 +174,23 @@ const completeOrder = async (req, res) => {
           buyerId,
           `split-${Date.now()}` // metadata hash
         );
-        
+
         console.log(`   ✅ Split tx: ${blockchainTx.txHash}`);
         console.log(`   📋 Child batch: ${childBatchId}`);
       }
-      
+
       console.log(`   🔗 View in Tenderly: https://dashboard.tenderly.co/tx/${blockchainTx.txHash}`);
-      
+
     } catch (blockchainError) {
       console.error(`   ❌ Blockchain error:`, blockchainError.message);
       blockchainTx = { txHash: null, error: blockchainError.message };
     }
 
     // 1. Update Order Status
-    order.status = 'transferred';
-=======
-    // 1. Update Order Status & Payment Info
-    order.status = 'transferred';
     if (paymentId) {
       order.paymentId = paymentId;
-      order.status = 'transferred'; // Or 'paid' then 'traceability' logic
     }
->>>>>>> b2e4b413fc17446047a51706d64dcfd609c6b55e
+    order.status = 'transferred';
     await order.save();
 
     // 2. Reduce Parent Listing Quantity
@@ -207,19 +201,46 @@ const completeOrder = async (req, res) => {
     }
     await parentListing.save();
 
-    // 3. Update Batch Journey (Traceability)
-    batch.journey.push({
-      handler: order.buyer._id,
-      role: order.buyer.role,
-      action: 'Bought',
-      date: new Date(),
-      transactionHash: blockchainTx.txHash || 'pending'
-    });
-    await batch.save();
+    let finalBatchIdForChild = batch._id;
+
+    // 3. Update Traceability (Mongo)
+    if (childBatchId) {
+      // CASE A: SPLIT (Partial Quantity)
+      // Create a NEW Batch in Mongo to match the Blockchain Child Batch
+      const newChildBatch = await Batch.create({
+        batchId: childBatchId,
+        cropName: batch.cropName,
+        quantityInitial: order.quantityRequest,
+        harvestDate: batch.harvestDate,
+        originLocation: batch.originLocation,
+        journey: [
+          ...batch.journey, // Inherit history
+          {
+            handler: order.buyer._id,
+            role: order.buyer.role,
+            action: 'Split / Bought',
+            date: new Date(),
+            transactionHash: blockchainTx.txHash || 'pending'
+          }
+        ]
+      });
+      finalBatchIdForChild = newChildBatch._id;
+
+    } else {
+      // CASE B: FULL TRANSFER (Whole Batch moves)
+      batch.journey.push({
+        handler: order.buyer._id,
+        role: order.buyer.role,
+        action: 'Bought',
+        date: new Date(),
+        transactionHash: blockchainTx.txHash || 'pending'
+      });
+      await batch.save();
+    }
 
     // 4. Create CHILD Listing
     const childListing = await Listing.create({
-      batch: batch._id,
+      batch: finalBatchIdForChild,
       seller: order.buyer,
       parentListing: parentListing._id,
       quantityAvailable: order.quantityRequest,
@@ -239,7 +260,7 @@ const completeOrder = async (req, res) => {
         childBatchId: childBatchId,
         fromId: sellerId,
         toId: buyerId,
-        tenderlyUrl: blockchainTx.txHash 
+        tenderlyUrl: blockchainTx.txHash
           ? `https://dashboard.tenderly.co/aarushee_p/tedhemedhes/testnet/TMtestnet1/tx/${blockchainTx.txHash}`
           : null
       }

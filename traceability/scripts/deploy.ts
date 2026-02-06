@@ -8,13 +8,13 @@ async function main() {
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
   const ProduceTraceability = await ethers.getContractFactory("ProduceTraceability");
-  
+
   console.log("Deploying contract...");
-  const contract = await ProduceTraceability.deploy();
-  
+  const contract = await ProduceTraceability.deploy(deployer.address);
+
   await contract.waitForDeployment();
   const address = await contract.getAddress();
-  
+
   console.log("✅ ProduceTraceability deployed to:", address);
 
   // Verify the contract on Tenderly
@@ -23,7 +23,7 @@ async function main() {
     name: "ProduceTraceability",
     address: address,
   });
-  
+
   console.log("✅ Contract verified on Tenderly!");
 }
 

@@ -9,11 +9,13 @@ const config: HardhatUserConfig = {
     virtualMainnet: {
       url: process.env.TENDERLY_VIRTUAL_MAINNET_RPC || "",
       chainId: 1,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
   tenderly: {
     project: "TedheMedhes",
     username: "aarushee_p",
+    accessKey: process.env.TENDERLY_ACCESS_KEY,
   },
 };
 
