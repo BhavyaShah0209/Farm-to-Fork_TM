@@ -9,9 +9,16 @@ export default function FarmerDashboard() {
     quantity: '',
     pricePerKg: '',
     originLocation: 'Farm A, Sector 1', // Default or user input
-    harvestDate: new Date().toISOString().split('T')[0] // Default to today
+    harvestDate: new Date().toISOString().split('T')[0], // Default to today
+    fertilizers: '', // New
+    pesticides: '', // New
+    proofImageUrl: '', // New
+    fertilizerProofUrl: '', // New
+    pesticideProofUrl: '', // New
+    imageUrl: '' // New
   });
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false); // New for file upload status
   const [message, setMessage] = useState({ type: '', text: '' });
   const [myListings, setMyListings] = useState([]);
   const [user, setUser] = useState(null);
@@ -49,6 +56,35 @@ export default function FarmerDashboard() {
     }
   };
 
+  const handleFileUpload = async (e, fieldName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage({ type: 'info', text: 'Uploading to IPFS...' });
+
+    const data = new FormData();
+    data.append('file', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('/api/upload/single', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setFormData(prev => ({ ...prev, [fieldName]: res.data.data.url }));
+      setMessage({ type: 'success', text: 'Upload successful!' });
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Upload failed. Try again.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -60,7 +96,14 @@ export default function FarmerDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/listings/create', formData, {
+      // Convert comma-separated string to array for backend
+      const payload = {
+        ...formData,
+        fertilizers: formData.fertilizers.split(',').map(s => s.trim()).filter(Boolean),
+        pesticides: formData.pesticides.split(',').map(s => s.trim()).filter(Boolean)
+      };
+
+      await axios.post('/api/listings/create', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -70,7 +113,13 @@ export default function FarmerDashboard() {
         quantity: '',
         pricePerKg: '',
         originLocation: 'Farm A, Sector 1',
-        harvestDate: new Date().toISOString().split('T')[0]
+        harvestDate: new Date().toISOString().split('T')[0],
+        fertilizers: '',
+        pesticides: '',
+        proofImageUrl: '',
+        fertilizerProofUrl: '',
+        pesticideProofUrl: '',
+        imageUrl: ''
       });
       fetchMyListings(); // Refresh list
     } catch (err) {
@@ -118,6 +167,17 @@ export default function FarmerDashboard() {
                 />
               </div>
 
+              <div style={{ marginBottom: '15px' }}>
+                <label>Crop Image</label>
+                <input
+                  type="file" accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'imageUrl')}
+                  disabled={uploading}
+                  style={{ marginTop: '5px' }}
+                />
+                {formData.imageUrl && <small style={{ display: 'block', color: 'green', marginTop: '5px' }}>✓ Image Uploaded Check</small>}
+              </div>
+
               <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label>Quantity (kg)</label>
@@ -147,6 +207,75 @@ export default function FarmerDashboard() {
                   style={{ width: '100%', padding: '10px', marginTop: '5px' }}
                 />
               </div>
+
+              {/* === Quality Check Section === */}
+              <div style={{ marginTop: '20px', padding: '15px', background: '#f9f9f9', borderRadius: '5px', border: '1px dashed #ccc', marginBottom: '20px' }}>
+                <h4 style={{ marginTop: 0, color: '#555' }}>✅ Quality & Safety Check</h4>
+                <p style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic', marginBottom: '15px' }}>
+                  Disclaimer: Please upload valid receipts of purchase or photos of the actual fertilizer/pesticide bags used.
+                  These documents verify the authenticity of your organic/safety claims.
+                </p>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Fertilizers Used (comma separated)</label>
+                  <input
+                    type="text"
+                    name="fertilizers"
+                    placeholder="e.g. Urea, DAP, Organic Compost"
+                    value={formData.fertilizers}
+                    onChange={handleChange}
+                    style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                  />
+                  <div style={{ marginTop: '10px', paddingLeft: '10px', borderLeft: '3px solid #eee' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Upload Fertilizer Receipt/Photo:</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => handleFileUpload(e, 'fertilizerProofUrl')}
+                      disabled={uploading}
+                      style={{ marginTop: '5px', display: 'block' }}
+                    />
+                    {formData.fertilizerProofUrl && <small style={{ display: 'block', color: 'green', marginTop: '2px' }}>✓ Fertilizer Proof Uploaded</small>}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Pesticides Used (comma separated)</label>
+                  <input
+                    type="text"
+                    name="pesticides"
+                    placeholder="e.g. Neem Oil, None"
+                    value={formData.pesticides}
+                    onChange={handleChange}
+                    style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                  />
+                  <div style={{ marginTop: '10px', paddingLeft: '10px', borderLeft: '3px solid #eee' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Upload Pesticide Receipt/Photo:</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => handleFileUpload(e, 'pesticideProofUrl')}
+                      disabled={uploading}
+                      style={{ marginTop: '5px', display: 'block' }}
+                    />
+                    {formData.pesticideProofUrl && <small style={{ display: 'block', color: 'green', marginTop: '2px' }}>✓ Pesticide Proof Uploaded</small>}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                  <label>Other Proof Document / Certificate (Optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => handleFileUpload(e, 'proofImageUrl')}
+                    disabled={uploading}
+                    style={{ width: '100%', padding: '10px', marginTop: '5px' }}
+                  />
+                  {formData.proofImageUrl && <small style={{ display: 'block', color: 'green' }}>✓ Certificate Uploaded</small>}
+                  <small style={{ color: '#888', display: 'block' }}>Upload a quality certificate or lab report.</small>
+                </div>
+              </div>
+              {/* === End Quality Check === */}
 
               <div style={{ marginBottom: '15px' }}>
                 <label>Origin Location</label>

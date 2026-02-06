@@ -168,9 +168,17 @@ export default function ListingDetails() {
 
       <div className="product-layout">
         <div className="product-image">
-          <div className="img-placeholder">
-            📦 {listing.batch?.cropName || 'Product'}
-          </div>
+          {listing.batch?.imageUrl ? (
+            <img
+              src={listing.batch.imageUrl}
+              alt={listing.batch.cropName}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+            />
+          ) : (
+            <div className="img-placeholder">
+              📦 {listing.batch?.cropName || 'Product'}
+            </div>
+          )}
         </div>
 
         <div className="product-info">

@@ -42,13 +42,19 @@ const registerUser = async (req, res) => {
     const encryptedPrivateKey = encrypt(wallet.privateKey);
 
     // 2. Create User
+    // If location is a simple string from frontend, map it to location.address
+    let userLocation = location;
+    if (typeof location === 'string') {
+      userLocation = { address: location };
+    }
+
     const user = await User.create({
       name,
       email: email || undefined, // Allow sparse index to work by setting undefined/null, not empty string
       mobile: mobile || undefined,
       password,
       role,
-      location,
+      location: userLocation,
       walletAddress,
       encryptedPrivateKey // Stored securely
     });

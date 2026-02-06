@@ -10,6 +10,15 @@ const batchSchema = new mongoose.Schema({
   harvestDate: { type: Date, required: true },
   originLocation: { type: String, required: true },
 
+  // Quality Checks
+  fertilizers: [String], // e.g. ["Urea", "DAP"]
+  pesticides: [String], // e.g. ["Neem Oil"]
+  qualityCertificateUrl: String,
+  proofImageUrl: String, // Verification proof (Generic)
+  fertilizerProofUrl: String, // Specific invoice/image for fertilizers
+  pesticideProofUrl: String, // Specific invoice/image for pesticides
+  imageUrl: String,      // Main display image of the crop
+
   // The Traceability Chain (Who held this and when)
   journey: [{
     handler: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

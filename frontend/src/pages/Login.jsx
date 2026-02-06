@@ -13,6 +13,7 @@ export default function Login() {
     name: '',
     mobile: '',
     password: '',
+    location: ''
   });
   const [role, setRole] = useState('farmer');
 
@@ -37,6 +38,7 @@ export default function Login() {
     if (isRegister) {
       payload.name = formData.name;
       payload.role = role;
+      payload.location = formData.location;
     } else {
       if (formData.email) payload.email = formData.email;
     }
@@ -58,7 +60,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-wrapper">
+    <div className="login-wrapper" >
       <div className="login-card">
         <div className="auth-toggle">
           <button
@@ -125,6 +127,21 @@ export default function Login() {
 
           {isRegister && (
             <div className="form-group">
+              <label>Location</label>
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                required={isRegister}
+                className="modern-input"
+                placeholder="e.g. Gujarat, India"
+              />
+            </div>
+          )}
+
+          {isRegister && (
+            <div className="form-group">
               <label>Role</label>
               <div className="role-options">
                 {['farmer', 'distributor', 'retailer', 'consumer'].map(r => (
@@ -147,6 +164,6 @@ export default function Login() {
           </button>
         </form>
       </div>
-    </div>
+    </div >
   );
 }

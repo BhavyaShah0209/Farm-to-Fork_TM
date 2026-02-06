@@ -1,14 +1,15 @@
 const Batch = require('../models/Batch');
 const Listing = require('../models/Listing');
-const { createBatch } = require('../utils/blockchain');
-const { uploadToIPFS } = require('../utils/ipfs');
+const { createBatch, addQualityCheck } = require('../utils/blockchain');
+const { uploadJSONToIPFS } = require('../utils/ipfs');
 const { encrypt } = require('../utils/encryption');
+
 
 // @desc    Farmer creates a new crop batch and listing
 // @route   POST /api/listings/create (Farmer only)
 // @access  Private
 const createBatchAndListing = async (req, res) => {
-  const { cropName, quantity, pricePerKg, harvestDate, originLocation } = req.body;
+  const { cropName, quantity, pricePerKg, harvestDate, originLocation, fertilizers, pesticides, proofImageUrl, fertilizerProofUrl, pesticideProofUrl, imageUrl } = req.body;
   const seller = req.user._id;
 
   if (req.user.role !== 'farmer') {
@@ -30,6 +31,9 @@ const createBatchAndListing = async (req, res) => {
       quantityInitial: quantity,
       harvestDate,
       originLocation,
+      fertilizers: fertilizers || [],
+      pesticides: pesticides || [],
+      proofImageUrl: proofImageUrl || "",
       farmerName: req.user.name,
       farmerWallet: req.user.walletAddress,
       createdAt: new Date().toISOString()
@@ -38,9 +42,9 @@ const createBatchAndListing = async (req, res) => {
     // 3. Upload metadata to IPFS (or encrypt it)
     let dataHash;
     try {
-      const ipfsHash = await uploadToIPFS(batchMetadata);
-      dataHash = ipfsHash;
-      console.log(`   📦 IPFS Hash: ${ipfsHash}`);
+      const { hash } = await uploadJSONToIPFS(batchMetadata);
+      dataHash = hash;
+      console.log(`   📦 IPFS Hash: ${dataHash}`);
     } catch (ipfsError) {
       // Fallback: Use encrypted hash
       console.log(`   ⚠️  IPFS upload failed, using encrypted hash`);
@@ -48,32 +52,10 @@ const createBatchAndListing = async (req, res) => {
       dataHash = encryptedData.substring(0, 31); // Smart contract accepts bytes32
     }
 
-    // 4. 🔥 CREATE BATCH ON BLOCKCHAIN - THIS SHOWS IN TENDERLY!
-    let blockchainTx;
-    try {
-      blockchainTx = await createBatch(
-        batchId,
-        quantity,
-        farmerId,
-        dataHash
-      );
-      
-      console.log(`   ✅ Blockchain transaction: ${blockchainTx.txHash}`);
-      console.log(`   🔗 View in Tenderly: https://dashboard.tenderly.co/tx/${blockchainTx.txHash}`);
-      
-      // Log events emitted
-      if (blockchainTx.events && blockchainTx.events.length > 0) {
-        console.log(`   📋 Events emitted:`);
-        blockchainTx.events.forEach(event => {
-          console.log(`      - ${event.name}`);
-        });
-      }
-      
-    } catch (blockchainError) {
-      console.error(`   ❌ Blockchain error:`, blockchainError.message);
-      // Continue anyway - blockchain is optional for now
-      blockchainTx = { txHash: null, error: blockchainError.message };
-    }
+    // 4. 🔥 CREATE BATCH ON BLOCKCHAIN (SKIPPED FOR LAZY MINTING USER REQUEST)
+    let blockchainTx = { txHash: null };
+    console.log("   ⏸️  Blockchain Minting Skipped (Lazy Minting Enabled)");
+    // The blockchain creation logic is handled in orderController.js upon purchase.
 
     // 5. Create MongoDB Batch record
     const newBatch = await Batch.create({
@@ -82,6 +64,12 @@ const createBatchAndListing = async (req, res) => {
       quantityInitial: quantity,
       harvestDate,
       originLocation,
+      fertilizers: fertilizers || [],
+      pesticides: pesticides || [],
+      proofImageUrl: proofImageUrl || "",
+      fertilizerProofUrl: fertilizerProofUrl || "",
+      pesticideProofUrl: pesticideProofUrl || "",
+      imageUrl: imageUrl || "",
       journey: [{
         handler: seller,
         role: 'farmer',
@@ -112,9 +100,7 @@ const createBatchAndListing = async (req, res) => {
         txHash: blockchainTx.txHash,
         batchId,
         farmerId,
-        tenderlyUrl: blockchainTx.txHash 
-          ? `https://dashboard.tenderly.co/aarushee_p/tedhemedhes/testnet/TMtestnet1/tx/${blockchainTx.txHash}`
-          : null
+        tenderlyUrl: null
       }
     });
 
@@ -123,6 +109,7 @@ const createBatchAndListing = async (req, res) => {
     res.status(500).json({ message: 'Failed to create listing', error: error.message });
   }
 };
+
 
 // @desc    Get listings (Active for everyone, All for owner)
 // @route   GET /api/listings
@@ -141,7 +128,8 @@ const getListings = async (req, res) => {
       ]
     })
       .populate('batch')
-      .populate('seller', 'name location role mobile walletAddress');
+      .populate('seller', 'name location role mobile walletAddress')
+      .sort({ createdAt: -1 }); // Sort by newest first
 
     res.json(listings);
   } catch (error) {

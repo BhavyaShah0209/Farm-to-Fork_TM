@@ -70,10 +70,27 @@ export default function Market() { // Simplified: one unified view for now
           {listings.map(l => (
             <Link to={`/listing/${l._id}`} key={l._id} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="card market-card" style={{ height: '100%', padding: '0', border: 'none', overflow: 'hidden' }}>
+                {l.batch?.imageUrl ? (
+                  <img
+                    src={l.batch.imageUrl}
+                    alt={l.batch.cropName}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '160px',
+                      objectFit: 'cover'
+                    }}
+                  />
+                ) : null}
+
                 <div style={{
                   height: '160px',
                   background: 'linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 100%)',
-                  display: 'flex',
+                  display: l.batch?.imageUrl ? 'none' : 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '4rem',

@@ -1,7 +1,7 @@
 const Order = require('../models/Order');
 const Listing = require('../models/Listing');
 const Batch = require('../models/Batch');
-const { transferBatch, splitBatch } = require('../utils/blockchain');
+const { transferBatch, splitBatch, getBatch, createBatch, addQualityCheck } = require('../utils/blockchain');
 
 // @desc    Distributor requests to buy from a listing
 // @route   POST /api/orders/create
@@ -156,6 +156,40 @@ const completeOrder = async (req, res) => {
     let childBatchId = null;
 
     try {
+      // 0. 🛡️ CHECK IF BATCH EXISTS ON BLOCKCHAIN (Lazy Minting)
+      // Since we disabled auto-minting in listingController (user request),
+      // we must mint it NOW if it doesn't exist before we can transfer/split it.
+      try {
+        await getBatch(batch.batchId);
+      } catch (err) {
+        console.log(`   ⚠️ Batch ${batch.batchId} not found on chain. Minting now (Lazy Mint)...`);
+
+        // Use placeholder hash or verify if we have dataHash in Mongo (we might need to save it in Mongo schema to reuse)
+        const dataHashBytes = require('ethers').encodeBytes32String("lazy-minted");
+
+        await createBatch(
+          batch.batchId,
+          batch.quantityInitial,
+          sellerId, // The seller (Farmer) becomes the first owner immediately
+          "ipfs-lazy-mint" // We don't have the original hash handy here without schema change, using placeholder
+        );
+
+        console.log(`   ✅ Minted genesis batch ${batch.batchId}`);
+
+        // Also add quality check data if available
+        if (batch.fertilizers?.length > 0 || batch.pesticides?.length > 0) {
+          await addQualityCheck(
+            batch.batchId,
+            batch.fertilizers || [],
+            batch.pesticides || [],
+            // Gather proofs
+            [batch.proofImageUrl, batch.fertilizerProofUrl, batch.pesticideProofUrl].filter(Boolean),
+            ""
+          );
+          console.log(`   ✅ Backfilled quality data`);
+        }
+      }
+
       if (parentListing.quantityAvailable === order.quantityRequest) {
         // 🔥 TRANSFER ENTIRE BATCH - SHOWS IN TENDERLY!
         console.log(`   📦 Transferring entire batch...`);

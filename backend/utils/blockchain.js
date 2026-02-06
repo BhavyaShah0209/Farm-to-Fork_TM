@@ -15,6 +15,7 @@ const contractABI = [
   "function createBatch(string calldata batchId, uint256 quantity, string calldata farmerId, bytes32 dataHash) external",
   "function transferBatch(string calldata batchId, string calldata toId) external",
   "function splitBatch(string calldata parentId, string calldata childId, uint256 qty, string calldata newHolder, bytes32 dataHash) external",
+  "function addQualityCheck(string calldata batchId, string[] calldata pesticides, string[] calldata fertilizers, string[] calldata photos, string calldata certHash) external",
   "function getBatch(string calldata id) external view returns (string memory, string memory, uint256, string memory, bytes32, uint8, tuple(string action, string fromId, string toId, uint256 timestamp)[] memory)",
   "function owner() external view returns (address)"
 ];
@@ -102,6 +103,40 @@ const createBatch = async (batchId, quantity, farmerId, dataHash) => {
     return { receipt, events, txHash: tx.hash };
   } catch (error) {
     console.error("❌ Error creating batch:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Add quality check data to a batch
+ * @param {string} batchId - Batch ID
+ * @param {Array<string>} pesticides - List of pesticides
+ * @param {Array<string>} fertilizers - List of fertilizers
+ * @param {Array<string>} photos - List of IPFS hashes for photos
+ * @param {string} certHash - IPFS hash for certificate
+ * @returns {Promise<Object>} Transaction receipt
+ */
+const addQualityCheck = async (batchId, pesticides, fertilizers, photos, certHash) => {
+  if (!contract) throw new Error("Blockchain not initialized");
+
+  try {
+    console.log(`\n✅ Adding quality check to batch: ${batchId}`);
+
+    // Ensure arrays are not null
+    const pests = pesticides || [];
+    const ferts = fertilizers || [];
+    const pics = photos || [];
+    const cert = certHash || "";
+
+    const tx = await contract.addQualityCheck(batchId, pests, ferts, pics, cert);
+    console.log(`📤 Transaction sent: ${tx.hash}`);
+
+    const receipt = await tx.wait();
+    console.log(`✅ Quality check added in block ${receipt.blockNumber}`);
+
+    return { receipt, txHash: tx.hash };
+  } catch (error) {
+    console.error("❌ Error adding quality check:", error.message);
     throw error;
   }
 };
@@ -246,6 +281,7 @@ module.exports = {
   createBatch,
   transferBatch,
   splitBatch,
+  addQualityCheck,
   getBatch,
   setupEventListeners
 };
