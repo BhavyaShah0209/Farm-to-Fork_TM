@@ -1,0 +1,156 @@
+### File Upload API Tests
+### Make sure to replace {{token}} with your actual JWT token
+
+@baseUrl = http://localhost:5000
+@token = YOUR_JWT_TOKEN_HERE
+
+###############################################
+# 1. Upload Single File
+###############################################
+
+POST {{baseUrl}}/api/upload/single
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/test-image.jpg
+--boundary--
+
+###############################################
+# 2. Upload Multiple Files
+###############################################
+
+POST {{baseUrl}}/api/upload/multiple
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="files"; filename="receipt1.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/receipt1.jpg
+--boundary
+Content-Disposition: form-data; name="files"; filename="receipt2.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/receipt2.jpg
+--boundary--
+
+###############################################
+# 3. Upload Quality Proof
+###############################################
+
+POST {{baseUrl}}/api/upload/quality-proof
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="batchId"
+
+0x123abc456def
+--boundary
+Content-Disposition: form-data; name="proofType"
+
+pesticide
+--boundary
+Content-Disposition: form-data; name="files"; filename="pesticide-receipt.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/pesticide-receipt.jpg
+--boundary--
+
+###############################################
+# 4. Get File URL by Hash
+###############################################
+
+GET {{baseUrl}}/api/upload/QmXxxx...
+# Replace QmXxxx... with actual IPFS hash from previous upload
+
+###############################################
+# TESTING WITH POSTMAN
+###############################################
+
+# Step 1: Get JWT Token
+# - First login or register: POST {{baseUrl}}/api/auth/login
+# - Copy the token from response
+# - Replace YOUR_JWT_TOKEN_HERE above with your token
+
+# Step 2: Test Single Upload
+# - Method: POST
+# - URL: http://localhost:5000/api/upload/single
+# - Headers: 
+#   - Authorization: Bearer YOUR_TOKEN
+# - Body: 
+#   - Select "form-data"
+#   - Key: "file" (change type to File)
+#   - Value: Select your image/PDF file
+
+# Step 3: Test Multiple Upload
+# - Method: POST
+# - URL: http://localhost:5000/api/upload/multiple
+# - Headers: Authorization: Bearer YOUR_TOKEN
+# - Body (form-data):
+#   - Key: "files" (File type)
+#   - Add multiple files with same key "files"
+
+# Step 4: Test Quality Proof Upload
+# - Method: POST
+# - URL: http://localhost:5000/api/upload/quality-proof
+# - Headers: Authorization: Bearer YOUR_TOKEN
+# - Body (form-data):
+#   - batchId: 0x123abc (Text)
+#   - proofType: pesticide (Text)
+#   - files: Select files (File type, multiple allowed)
+
+###############################################
+# EXPECTED RESPONSES
+###############################################
+
+# Single Upload Success:
+# {
+#   "success": true,
+#   "message": "File uploaded successfully",
+#   "data": {
+#     "ipfsHash": "QmXxxx...",
+#     "url": "https://gateway.pinata.cloud/ipfs/QmXxxx...",
+#     "fileName": "test-image.jpg",
+#     "fileSize": 245678,
+#     "mimeType": "image/jpeg"
+#   }
+# }
+
+# Multiple Upload Success:
+# {
+#   "success": true,
+#   "message": "2 files uploaded successfully",
+#   "data": [
+#     { "ipfsHash": "QmXxxx...", "url": "...", ... },
+#     { "ipfsHash": "QmYyyy...", "url": "...", ... }
+#   ]
+# }
+
+###############################################
+# ERROR TESTING
+###############################################
+
+# Test without token (should get 401)
+POST {{baseUrl}}/api/upload/single
+Content-Type: multipart/form-data
+
+# Test with wrong file type (should get 400)
+# Try uploading .txt, .doc, .zip etc
+
+# Test file too large (should get 400)
+# Try uploading file > 10MB
+
+###############################################
+# NOTES
+###############################################
+# - Replace file paths with actual paths on your system
+# - Make sure server is running on port 5000
+# - Ensure PINATA_API_JWT is set in .env
+# - Check backend/uploads/ folder is created
+# - npm install multer should be run first
